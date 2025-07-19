@@ -11,7 +11,7 @@ Automatically forwards receipts from your Gmail and iCloud accounts to your wife
 - 📊 **Complete Notion integration** for monitoring and control
 - 📱 **Mobile management** via Notion app
 - 🎛️ **Manual overrides** directly in Notion databases
-- 🎯 **Manual forwarding system** with custom rules and pattern matching
+- 🎯 **Manual catch-all system** with custom rules to ensure nothing gets missed
 - 💰 **Spending analysis** with amount extraction
 - 🔄 **Real-time sync** between email replies and Notion
 
@@ -45,11 +45,11 @@ Add entries directly to Notion Preferences database:
 - **Blocked Category**: Item="restaurants", Type="Blocked Category"
 
 ### Manual Forward Rules
-Create custom forwarding rules in the Manual Forward database:
-- **Email Pattern**: "*@amazon.com" (wildcards supported)
+Create custom catch-all rules in the Manual Forward database:
+- **Email Pattern**: "*@amazon.com" (wildcards supported)  
 - **Subject Pattern**: "*order*" or "receipt"
-- **Forward To**: custom-email@example.com
 - **Priority**: Lower numbers = higher priority
+- **Purpose**: Catch emails that might be missed by regular receipt detection
 
 ## 📊 Analytics
 

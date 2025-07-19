@@ -154,8 +154,23 @@ export default async function handler(req, res) {
               }</code> - Always forward from this sender<br>
               • <code style="background: #e5e7eb; padding: 2px 4px; border-radius: 3px;">SETTINGS</code> - View your preferences
             </div>
-            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af;">
-              📊 View detailed dashboard in Notion
+            
+            <div style="margin-top: 20px; padding: 16px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 8px; border-left: 4px solid #0ea5e9;">
+              <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 16px; margin-right: 8px;">🤖</span>
+                <h5 style="margin: 0; color: #0c4a6e; font-size: 14px; font-weight: 600;">Smart Receipt Forwarder</h5>
+              </div>
+              <p style="margin: 0; font-size: 12px; color: #075985; line-height: 1.4;">
+                This email was automatically detected as a receipt and forwarded to you by your personal receipt management system. 
+                The system learns from your replies and uses Notion for smart filtering and analytics.
+              </p>
+              <div style="margin-top: 8px; font-size: 11px; color: #0284c7;">
+                ✨ <strong>How it works:</strong> Monitors Gmail & iCloud → Detects receipts → Smart filtering → Forwards to you → Learns from your replies
+              </div>
+            </div>
+            
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
+              📊 View detailed dashboard in Notion • 🛠️ Fully automated with smart learning
             </div>
           </div>
         </div>
