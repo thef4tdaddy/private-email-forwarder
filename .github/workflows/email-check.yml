@@ -2,8 +2,11 @@ name: Email Processing
 
 on:
   schedule:
-    # Run every 3 hours (8 times per day)
-    - cron: '0 */3 * * *'
+    # Run every 2 hours (12 times per day) - balanced safety vs. usage
+    - cron: '0 */2 * * *'
+    # Alternatives based on your needs:
+    # Every hour (uses ~2000 min/month): - cron: '0 * * * *'
+    # Every 3 hours (uses ~500 min/month): - cron: '0 */3 * * *'
     # Also run on manual trigger
   workflow_dispatch:
     inputs:
