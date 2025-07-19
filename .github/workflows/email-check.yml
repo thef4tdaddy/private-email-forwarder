@@ -1,0 +1,90 @@
+name: Email Processing
+
+on:
+  schedule:
+    # Run every 3 hours (8 times per day)
+    - cron: '0 */3 * * *'
+    # Also run on manual trigger
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Processing mode'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - regular
+          - manual
+          - replies
+
+jobs:
+  process-emails:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Process Regular Email Checks
+      if: ${{ github.event.inputs.mode == 'all' || github.event.inputs.mode == 'regular' || github.event.inputs.mode == '' }}
+      run: |
+        echo "🔍 Processing regular email checks..."
+        response=$(curl -s -X GET \
+          "${{ secrets.VERCEL_APP_URL }}/api/check-emails" \
+          -H "Content-Type: application/json")
+        
+        echo "Regular check response: $response"
+        
+        # Check if the response contains success
+        if echo "$response" | grep -q '"success":true'; then
+          echo "✅ Regular email check completed successfully"
+        else
+          echo "❌ Regular email check failed"
+          echo "$response"
+          exit 1
+        fi
+
+    - name: Process Manual Forward Rules
+      if: ${{ github.event.inputs.mode == 'all' || github.event.inputs.mode == 'manual' || github.event.inputs.mode == '' }}
+      run: |
+        echo "🎯 Processing manual forward rules..."
+        response=$(curl -s -X GET \
+          "${{ secrets.VERCEL_APP_URL }}/api/manual-forward?mode=auto&hours=4" \
+          -H "Content-Type: application/json")
+        
+        echo "Manual forward response: $response"
+        
+        # Check if the response contains success
+        if echo "$response" | grep -q '"success":true'; then
+          echo "✅ Manual forward processing completed successfully"
+        else
+          echo "❌ Manual forward processing failed"
+          echo "$response"
+          exit 1
+        fi
+
+    - name: Process Reply Commands
+      if: ${{ github.event.inputs.mode == 'all' || github.event.inputs.mode == 'replies' || github.event.inputs.mode == '' }}
+      run: |
+        echo "💬 Processing reply commands..."
+        response=$(curl -s -X GET \
+          "${{ secrets.VERCEL_APP_URL }}/api/process-replies" \
+          -H "Content-Type: application/json")
+        
+        echo "Reply processing response: $response"
+        
+        # Check if the response contains success
+        if echo "$response" | grep -q '"success":true'; then
+          echo "✅ Reply processing completed successfully"
+        else
+          echo "❌ Reply processing failed"
+          echo "$response"
+          exit 1
+        fi
+
+    - name: Send Status Summary
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "🎉 All email processing completed successfully at $(date)"
+        else
+          echo "⚠️ Some email processing failed at $(date)"
+        fi
