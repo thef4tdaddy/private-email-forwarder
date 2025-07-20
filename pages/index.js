@@ -177,11 +177,19 @@ export default function Dashboard() {
             ) : (
               <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span>Environment Variables:</span>
+                  <span>Required Variables:</span>
                   <span style={{ color: healthData.allRequiredEnvVarsPresent ? '#10b981' : '#ef4444' }}>
-                    {healthData.allRequiredEnvVarsPresent ? '✅ All Set' : '❌ Missing'}
+                    {healthData.summary?.requiredVars || (healthData.allRequiredEnvVarsPresent ? '✅ All Set' : '❌ Missing')}
                   </span>
                 </div>
+                {healthData.summary?.optionalVars && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span>Optional Variables:</span>
+                    <span style={{ color: '#6b7280' }}>
+                      {healthData.summary.optionalVars}
+                    </span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span>Module Loading:</span>
                   <span style={{ color: !healthData.hasModuleLoadingErrors ? '#10b981' : '#f59e0b' }}>
@@ -192,6 +200,15 @@ export default function Dashboard() {
                   <div style={{ background: '#fef3c7', padding: '8px', borderRadius: '6px', fontSize: '12px', marginTop: '8px' }}>
                     <strong>Module Issues:</strong><br/>
                     {healthData.moduleLoadingErrors.join(', ')}
+                  </div>
+                )}
+                {!healthData.allRequiredEnvVarsPresent && healthData.environment?.required && (
+                  <div style={{ background: '#fee2e2', padding: '8px', borderRadius: '6px', fontSize: '12px', marginTop: '8px' }}>
+                    <strong>Missing Required Variables:</strong><br/>
+                    {Object.entries(healthData.environment.required)
+                      .filter(([key, value]) => !value)
+                      .map(([key]) => key.replace('has', '').replace(/([A-Z])/g, '_$1').toUpperCase())
+                      .join(', ')}
                   </div>
                 )}
               </div>

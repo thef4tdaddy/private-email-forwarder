@@ -12,15 +12,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Basic environment check
+    // Basic environment check - only check variables that are actually required
     const envCheck = {
-      hasWifeEmail: !!process.env.WIFE_EMAIL,
       hasNotionToken: !!process.env.NOTION_TOKEN,
       hasNotionActivityDb: !!process.env.NOTION_ACTIVITY_DB,
       hasNotionPreferencesDb: !!process.env.NOTION_PREFERENCES_DB,
       hasNotionRepliesDb: !!process.env.NOTION_REPLIES_DB,
       hasNotionStatsDb: !!process.env.NOTION_STATS_DB,
       hasNotionManualForwardDb: !!process.env.NOTION_MANUAL_FORWARD_DB,
+    };
+
+    // Optional environment variables (won't fail health check)
+    const optionalEnvCheck = {
+      hasWifeEmail: !!process.env.WIFE_EMAIL,
       hasGmailCredentials: !!(process.env.GMAIL_EMAIL && process.env.GMAIL_APP_PASSWORD),
       hasIcloudCredentials: !!(process.env.ICLOUD_EMAIL && process.env.ICLOUD_PASSWORD),
       hasKvUrl: !!process.env.KV_URL,
@@ -37,14 +41,23 @@ export default async function handler(req, res) {
       moduleLoadingErrors.push(`email-clients: ${error.message}`);
     }
 
+    const allRequiredPresent = Object.values(envCheck).every(Boolean);
+    
     res.status(200).json({
       success: true,
       status: "healthy",
       timestamp: new Date().toISOString(),
-      environment: envCheck,
+      environment: {
+        required: envCheck,
+        optional: optionalEnvCheck
+      },
       moduleLoadingErrors,
-      allRequiredEnvVarsPresent: Object.values(envCheck).every(Boolean),
-      hasModuleLoadingErrors: moduleLoadingErrors.length > 0
+      allRequiredEnvVarsPresent: allRequiredPresent,
+      hasModuleLoadingErrors: moduleLoadingErrors.length > 0,
+      summary: {
+        requiredVars: `${Object.values(envCheck).filter(Boolean).length}/${Object.keys(envCheck).length}`,
+        optionalVars: `${Object.values(optionalEnvCheck).filter(Boolean).length}/${Object.keys(optionalEnvCheck).length}`
+      }
     });
   } catch (error) {
     res.status(500).json({
