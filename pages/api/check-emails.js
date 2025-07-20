@@ -120,6 +120,17 @@ export default async function handler(req, res) {
         continue;
       }
 
+      // Check if in development mode
+      const isDevMode = process.env.DEV_MODE === 'true';
+      
+      if (isDevMode) {
+        console.log(`[DEV MODE] Would forward: ${email.subject}`);
+        await notion.logActivity(email, "dev-skipped", "Development mode active");
+        forwardedCount++; // Count as forwarded for stats
+        await PreferenceManager.markAsProcessed(email.id);
+        continue;
+      }
+
       // Forward the email
       const forwardSubject = CONFIG.FORWARD_TEMPLATE.subject.replace(
         "{originalSubject}",
