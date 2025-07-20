@@ -16,7 +16,11 @@ export default async function handler(req, res) {
     const envCheck = {
       hasWifeEmail: !!process.env.WIFE_EMAIL,
       hasNotionToken: !!process.env.NOTION_TOKEN,
-      hasNotionDatabase: !!process.env.NOTION_DATABASE_ID,
+      hasNotionActivityDb: !!process.env.NOTION_ACTIVITY_DB,
+      hasNotionPreferencesDb: !!process.env.NOTION_PREFERENCES_DB,
+      hasNotionRepliesDb: !!process.env.NOTION_REPLIES_DB,
+      hasNotionStatsDb: !!process.env.NOTION_STATS_DB,
+      hasNotionManualForwardDb: !!process.env.NOTION_MANUAL_FORWARD_DB,
       hasGmailCredentials: !!(process.env.GMAIL_EMAIL && process.env.GMAIL_APP_PASSWORD),
       hasIcloudCredentials: !!(process.env.ICLOUD_EMAIL && process.env.ICLOUD_PASSWORD),
       hasKvUrl: !!process.env.KV_URL,

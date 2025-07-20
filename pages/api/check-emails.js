@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     // Wrap main logic in timeout handler
     const mainLogic = async () => {
       // Check required environment variables first
-      const requiredEnvVars = ['WIFE_EMAIL', 'NOTION_TOKEN', 'NOTION_DATABASE_ID'];
+      const requiredEnvVars = ['WIFE_EMAIL', 'NOTION_TOKEN', 'NOTION_ACTIVITY_DB', 'NOTION_PREFERENCES_DB', 'NOTION_REPLIES_DB', 'NOTION_STATS_DB', 'NOTION_MANUAL_FORWARD_DB'];
       const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
       
       if (missingEnvVars.length > 0) {
