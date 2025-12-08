@@ -1,12 +1,17 @@
 import re
 import os
+from typing import List, Dict, Union, Any
 
 class ReceiptDetector:
     @staticmethod
-    def is_receipt(email_data: dict) -> bool:
-        subject = (email_data.get("subject") or "").lower()
-        body = (email_data.get("body") or "").lower()
-        sender = (email_data.get("from") or "").lower()
+    def is_receipt(email: Any) -> bool:
+        """
+        Determines if an email is a receipt based on subject, body, and sender.
+        Expects 'email' object to have 'subject', 'body', and 'sender' (or 'from') attributes or keys.
+        """
+        subject = (getattr(email, "subject", None) or email.get("subject", "") or "").lower()
+        body = (getattr(email, "body", None) or email.get("body", "") or "").lower()
+        sender = (getattr(email, "sender", None) or getattr(email, "from", None) or email.get("sender", "") or email.get("from", "") or "").lower()
 
         # STEP 0: EXCLUDE reply emails and forwards first
         if ReceiptDetector.is_reply_or_forward(subject, sender):
@@ -28,7 +33,7 @@ class ReceiptDetector:
             print(f"✅ Strong receipt indicators found: {subject}")
             return True
 
-        # STEP 3: Check for transactional patterns
+        # STEP 3: Check for transactional patterns (order + amount + confirmation)
         transactional_score = ReceiptDetector.calculate_transactional_score(subject, body, sender)
         if transactional_score >= 3:
             print(f"✅ High transactional score ({transactional_score}): {subject}")
@@ -45,28 +50,36 @@ class ReceiptDetector:
     @staticmethod
     def is_reply_or_forward(subject: str, sender: str) -> bool:
         reply_patterns = [
-            r"^re:\s*",  # "Re: "
-            r"^fwd?:\s*",  # "Fwd: " or "Fw: "
-            r"^fw:\s*",  # "Fw: "
-            r"^forward:\s*",  # "Forward: "
-            r"\[fwd\]",  # "[FWD]"
-            r"\(fwd\)",  # "(FWD)"
+            r"re:\s*",      # "Re: "
+            r"fwd?:\s*",    # "Fwd: " or "Fw: "
+            r"fw:\s*",      # "Fw: "
+            r"forward:\s*", # "Forward: "
+            r"\[fwd\]",     # "[FWD]"
+            r"\(fwd\)",     # "(FWD)"
         ]
 
-        has_reply_subject = any(re.search(pattern, subject, re.IGNORECASE) for pattern in reply_patterns)
+        # Use re.IGNORECASE for all patterns
+        if any(re.match(pattern, subject, re.IGNORECASE) for pattern in reply_patterns):
+            return True
 
-        # Check if from wife or self
+        # Check if from wife's email
         wife_email = (os.environ.get("WIFE_EMAIL") or "your-wife@email.com").lower()
-        is_from_wife = wife_email in sender
+        if wife_email in sender:
+            return True
 
+        # Check if from your own email addresses
         your_emails = [
-            os.environ.get("GMAIL_EMAIL"),
-            os.environ.get("ICLOUD_EMAIL"),
-            os.environ.get("SENDER_EMAIL"),
+            e.lower() for e in [
+                os.environ.get("GMAIL_EMAIL"),
+                os.environ.get("ICLOUD_EMAIL"),
+                os.environ.get("SENDER_EMAIL"),
+            ] if e
         ]
-        is_from_you = any(email and email.lower() in sender for email in your_emails if email)
+        
+        if any(email in sender for email in your_emails):
+            return True
 
-        return has_reply_subject or is_from_wife or is_from_you
+        return False
 
     @staticmethod
     def is_shipping_notification(subject: str, body: str, sender: str) -> bool:
@@ -83,6 +96,7 @@ class ReceiptDetector:
             r"delivery-",
             r"tracking-",
             r"shipment-",
+            # Other carriers
             r"tracking@ups\.com",
             r"delivery@fedex\.com",
             r"tracking@usps\.com",
@@ -93,6 +107,7 @@ class ReceiptDetector:
             return True
 
         shipping_patterns = [
+            # Amazon shipping patterns
             r"your\s+.*\s+(has\s+)?shipped",
             r"shipped\s+today",
             r"out\s+for\s+delivery",
@@ -108,6 +123,8 @@ class ReceiptDetector:
             r"order.*shipped",
             r"item.*shipped",
             r"package.*shipped",
+            
+            # Delivery status updates
             r"delivery\s+attempt",
             r"delivery\s+rescheduled",
             r"delivery\s+delayed",
@@ -116,11 +133,15 @@ class ReceiptDetector:
             r"arriving\s+tomorrow",
             r"expected\s+delivery",
             r"estimated\s+delivery",
+            
+            # Carrier notifications
             r"ups\s+delivery",
             r"fedex\s+delivery",
             r"usps\s+delivery",
             r"amazon\s+delivery",
             r"dhl\s+delivery",
+            
+            # Amazon-specific shipping language
             r"your\s+amazon.*order",
             r"amazon.*shipment",
             r"preparing\s+to\s+ship",
@@ -130,8 +151,8 @@ class ReceiptDetector:
         ]
 
         text = f"{subject} {body}".lower()
+        
         has_shipping_pattern = any(re.search(pattern, text, re.IGNORECASE) for pattern in shipping_patterns)
-
         if not has_shipping_pattern:
             return False
 
@@ -153,6 +174,7 @@ class ReceiptDetector:
         ]
 
         has_purchase_indicators = any(re.search(pattern, text, re.IGNORECASE) for pattern in purchase_indicators)
+        
         return has_shipping_pattern and not has_purchase_indicators
 
     @staticmethod
@@ -166,15 +188,22 @@ class ReceiptDetector:
             "circular", "black friday", "cyber monday", "holiday sale", "back to school",
             "rewards program", "loyalty", "points earned", "cashback earned", "gift card",
             "sweepstakes", "contest", "giveaway", "win", "personalized", "just for you",
-            "based on your", "you might like", "weekly digest", "daily digest", "roundup",
-            "this week", "new releases", "best deals", "top deals", "hot deals", "price drop",
-            "discounted", "on sale", "reduced price", "lowest price", "price alert", "wishlist",
-            "watch list", "compare prices", "deal alert", "digest", "update", "news", "updates",
-            "latest", "recent", "weekly", "monthly", "daily", "edition", "issue", "curated",
-            "handpicked", "selected", "picks", "discover", "explore", "find", "search",
-            "browse", "view all", "see more", "learn more", "read more", "get started",
-            "sign up", "join", "register", "download", "try", "expires", "ending", "last chance",
-            "final", "closing", "while supplies last", "limited quantity", "almost gone",
+            "based on your", "you might like",
+            # Gaming/deals specific
+            "weekly digest", "daily digest", "roundup", "this week", "new releases",
+            "best deals", "top deals", "hot deals", "price drop", "discounted", "on sale",
+            "reduced price", "lowest price", "price alert", "wishlist", "watch list",
+            "compare prices", "deal alert",
+            # Newsletter patterns
+            "digest", "update", "news", "updates", "latest", "recent", "weekly",
+            "monthly", "daily", "edition", "issue", "curated", "handpicked", "selected", "picks",
+            # Marketing action words
+            "discover", "explore", "find", "search", "browse", "view all", "see more",
+            "learn more", "read more", "get started", "sign up", "join", "register",
+            "download", "try",
+            # Promotional urgency
+            "expires", "ending", "last chance", "final", "closing", "while supplies last",
+            "limited quantity", "almost gone",
         ]
 
         if any(keyword in subject for keyword in promotional_keywords):
@@ -214,15 +243,21 @@ class ReceiptDetector:
             r"unsubscribe",
         ]
         
-        # In JS this was body.includes(pattern.source.replace()...). Regex search is simpler.
+        # JS used replace(/[\/\\]/g, "") before checking source, but in python we check string
+        # JS: body.includes(pattern.source...) -> Replicated by checking regex simply
         if any(re.search(pattern, body, re.IGNORECASE) for pattern in tracking_patterns):
             return True
-            
+
         deals_patterns = [
-            r"deals?\s*net", r"deals?\s*com", r"bargain", r"slickdeals",
-            r"reddit.*deals", r"steam.*sale", r"game.*deals",
+            r"deals?\s*net",
+            r"deals?\s*com",
+            r"bargain",
+            r"slickdeals",
+            r"reddit.*deals",
+            r"steam.*sale",
+            r"game.*deals",
         ]
-        
+
         if any(re.search(pattern, sender, re.IGNORECASE) or re.search(pattern, subject, re.IGNORECASE) or re.search(pattern, body, re.IGNORECASE) for pattern in deals_patterns):
             return True
 
@@ -257,7 +292,7 @@ class ReceiptDetector:
     @staticmethod
     def calculate_transactional_score(subject: str, body: str, sender: str) -> int:
         score = 0
-        text = f"{subject} {body} {sender}".lower()
+        text = f"{subject} {body} {sender}"
 
         indicators = [
             (r"order\s*#?\s*[a-z0-9\-]{6,}", 2),
@@ -277,42 +312,77 @@ class ReceiptDetector:
         for pattern, points in indicators:
             if re.search(pattern, text, re.IGNORECASE):
                 score += points
+        
         return score
 
     @staticmethod
     def is_known_receipt_sender(sender: str) -> bool:
-        reliable_senders = [
+        reliable_receipt_senders = [
             "amazon.com", "amazon.co", "amazonses.com", "auto-confirm@amazon.com",
-            "order-update@amazon.com", "digital-no-reply@amazon.com", "payments-messages@amazon.com",
-            "paypal.com", "paypal-communications.com", "stripe.com", "square.com", "apple.com",
-            "itunes.com", "google.com", "googlepayments.com", "microsoft.com", "xbox.com",
-            "uber.com", "lyft.com", "doordash.com", "grubhub.com", "instacart.com", "shipt.com",
+            "order-update@amazon.com", "digital-no-reply@amazon.com",
+            "payments-messages@amazon.com", "paypal.com", "paypal-communications.com",
+            "stripe.com", "square.com", "apple.com", "itunes.com", "google.com",
+            "googlepayments.com", "microsoft.com", "xbox.com", "uber.com", "lyft.com",
+            "doordash.com", "grubhub.com", "instacart.com", "shipt.com",
         ]
-        return any(s in sender for s in reliable_senders)
+        return any(s in sender for s in reliable_receipt_senders)
 
     @staticmethod
     def has_transaction_confirmation(subject: str, body: str) -> bool:
-        patterns = [
-            r"confirmation", r"receipt", r"order\s*#", r"invoice", r"payment",
-            r"charged", r"bill", r"statement", r"\$[0-9,]+\.[0-9]{2}",
+        confirmation_patterns = [
+            r"confirmation",
+            r"receipt",
+            r"order\s*#",
+            r"invoice",
+            r"payment",
+            r"charged",
+            r"bill",
+            r"statement",
+            r"\$[0-9,]+\.[0-9]{2}",
         ]
-        return any(re.search(p, subject, re.IGNORECASE) or re.search(p, body, re.IGNORECASE) for p in patterns)
+        return any(re.search(pattern, subject, re.IGNORECASE) or re.search(pattern, body, re.IGNORECASE) for pattern in confirmation_patterns)
 
     @staticmethod
-    def categorize_receipt(sender: str, subject: str) -> str:
-        sender = sender.lower()
-        subject = subject.lower()
+    def categorize_receipt(email: Any) -> str:
+        sender = (getattr(email, "sender", None) or getattr(email, "from", None) or email.get("sender", "") or email.get("from", "") or "").lower()
+        subject = (getattr(email, "subject", None) or email.get("subject", "") or "").lower()
 
         if "amazon" in sender or "aws" in sender: return "amazon"
         if "uber" in sender or "lyft" in sender: return "transportation"
-        if "doordash" in sender or "grubhub" in sender or "ubereats" in sender: return "food-delivery"
-        if "starbucks" in sender or "mcdonalds" in sender or "subway" in sender: return "restaurants"
-        if "walmart" in sender or "target" in sender or "costco" in sender: return "retail"
-        if "netflix" in sender or "spotify" in sender or "adobe" in sender: return "subscriptions"
-        if "paypal" in sender or "venmo" in sender or "square" in sender: return "payments"
+        if any(s in sender for s in ["doordash", "grubhub", "ubereats"]): return "food-delivery"
+        if any(s in sender for s in ["starbucks", "mcdonalds", "subway"]): return "restaurants"
+        if any(s in sender for s in ["walmart", "target", "costco"]): return "retail"
+        if any(s in sender for s in ["netflix", "spotify", "adobe"]): return "subscriptions"
+        if any(s in sender for s in ["paypal", "venmo", "square"]): return "payments"
         
         if any(s in sender for s in ["att", "verizon", "comcast", "xfinity", "spectrum"]): return "utilities"
+        
         if any(s in sender for s in ["cvs", "walgreens", "pharmacy"]) or "prescription" in subject or "copay" in subject: return "healthcare"
+        
         if any(s in sender for s in ["irs", "dmv", "gov"]) or "tax" in subject or "license" in subject: return "government"
         
         return "other"
+
+    @staticmethod
+    def get_detection_confidence(email: Any) -> int:
+        subject = (getattr(email, "subject", None) or email.get("subject", "") or "").lower()
+        body = (getattr(email, "body", None) or email.get("body", "") or "").lower()
+        sender = (getattr(email, "sender", None) or getattr(email, "from", None) or email.get("sender", "") or email.get("from", "") or "").lower()
+
+        if ReceiptDetector.is_promotional_email(subject, body, sender):
+            return 0
+
+        confidence = 0
+        if ReceiptDetector.has_strong_receipt_indicators(subject, body):
+            confidence += 40
+        
+        transaction_score = ReceiptDetector.calculate_transactional_score(subject, body, sender)
+        confidence += transaction_score * 10
+        
+        if ReceiptDetector.is_known_receipt_sender(sender):
+            confidence += 20
+        
+        if ReceiptDetector.has_transaction_confirmation(subject, body):
+            confidence += 10
+            
+        return min(confidence, 100)
