@@ -76,6 +76,18 @@ class ReceiptDetector:
             ] if e
         ]
         
+        # Add emails from EMAIL_ACCOUNTS
+        import json
+        try:
+            accounts_json = os.environ.get("EMAIL_ACCOUNTS")
+            if accounts_json:
+                accounts = json.loads(accounts_json)
+                for acc in accounts:
+                    if acc.get("email"):
+                        your_emails.append(acc.get("email").lower())
+        except:
+            pass
+        
         if any(email in sender for email in your_emails):
             return True
 
