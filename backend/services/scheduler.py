@@ -36,7 +36,7 @@ def process_emails():
             
             # Detect
             is_receipt = ReceiptDetector.is_receipt(email_data)
-            category = ReceiptDetector.categorize_receipt(email_data.get("from", ""), email_data.get("subject", ""))
+            category = ReceiptDetector.categorize_receipt(email_data)
             
             status = "ignored"
             reason = "Not a receipt"

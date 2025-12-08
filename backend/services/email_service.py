@@ -45,21 +45,42 @@ class EmailService:
                         
                         # Get body
                         body = ""
+                        html_body = ""
+                        
                         if msg.is_multipart():
                             for part in msg.walk():
                                 content_type = part.get_content_type()
                                 content_disposition = str(part.get("Content-Disposition"))
                                 
-                                if content_type == "text/plain" and "attachment" not in content_disposition:
+                                if "attachment" in content_disposition:
+                                    continue
+
+                                if content_type == "text/plain":
                                     try:
                                         body = part.get_payload(decode=True).decode()
                                     except:
                                         pass
+                                elif content_type == "text/html":
+                                    try:
+                                        html_body = part.get_payload(decode=True).decode()
+                                    except:
+                                        pass
                         else:
+                            content_type = msg.get_content_type()
                             try:
-                                body = msg.get_payload(decode=True).decode()
+                                payload = msg.get_payload(decode=True).decode()
+                                if content_type == "text/html":
+                                    html_body = payload
+                                else:
+                                    body = payload
                             except:
                                 pass
+                        
+                        # Fallback to HTML if no plain text, or if plain text is empty/useless
+                        if not body and html_body:
+                            from bs4 import BeautifulSoup
+                            soup = BeautifulSoup(html_body, "html.parser")
+                            body = soup.get_text(separator=" ", strip=True)
 
                         emails_data.append({
                             "id": e_id.decode(), # IMAP ID

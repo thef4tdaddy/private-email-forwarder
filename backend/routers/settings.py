@@ -45,3 +45,11 @@ def delete_rule(rule_id: int, session: Session = Depends(get_session)):
     session.delete(rule)
     session.commit()
     return {"ok": True}
+
+from backend.services.scheduler import process_emails
+from fastapi import BackgroundTasks
+
+@router.post("/trigger-poll")
+def trigger_poll(background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
+    background_tasks.add_task(process_emails)
+    return {"status": "triggered", "message": "Email poll started in background"}
