@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import Mock, patch, MagicMock
 from backend.services.email_service import EmailService
 import email
