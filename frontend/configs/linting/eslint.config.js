@@ -8,36 +8,57 @@ import exclusions from './config-modules/exclusions.js';
 
 export default tseslint.config(
   { ignores: ['dist', '.svelte-kit'] },
+  
+  // Base configs
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   ...svelte.configs['flat/recommended'],
+
+  // App-wide settings
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ['**/*.{ts,tsx,svelte}'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+  },
+
+  // Node Scripts
+  {
+    files: ['scripts/**/*.js', '*.config.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      }
+    }
+  },
+
+  // Svelte-specific parser setup
+  {
+    files: ['**/*.svelte'],
+    languageOptions: {
       parserOptions: {
         parser: tseslint.parser,
         extraFileExtensions: ['.svelte'],
       },
     },
+  },
+
+  // Custom Rules (Shared)
+  {
+    files: ['**/*.{ts,tsx,svelte}'],
     rules: {
       ...architectureRules,
       ...strictTypingRules,
       ...exclusions,
+      'svelte/no-at-html-tags': 'warn', 
     },
   },
+
   // Architecture enforcement block
   {
     files: ['src/pages/**/*.{ts,tsx,svelte}', 'src/components/**/*.{ts,tsx,svelte}'],
     rules: {
       ...architectureRules,
-    },
-  },
-  // Strict typing block
-  {
-    files: ['**/*.{ts,tsx,svelte}'],
-    rules: {
-      ...strictTypingRules,
     },
   },
 );

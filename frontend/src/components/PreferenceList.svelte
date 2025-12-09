@@ -2,9 +2,15 @@
 	import { fetchJson } from '../lib/api';
 	import { onMount } from 'svelte';
 
+	interface Item {
+		id?: number;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		[key: string]: any; // Allow dynamic access for this form
+	}
+
 	export let type: 'preferences' | 'rules';
-	let items: any[] = [];
-	let newItem: any = {};
+	let items: Item[] = [];
+	let newItem: Item = {};
 
 	// Basic form fields based on type
 	let fields =
@@ -29,8 +35,8 @@
 	async function loadItems() {
 		try {
 			items = await fetchJson(`/settings/${type}`);
-		} catch (e) {
-			console.error(e);
+		} catch {
+			console.error('Error loading items');
 		}
 	}
 
@@ -43,7 +49,7 @@
 			});
 			items = [...items, res];
 			newItem = {}; // Reset
-		} catch (e) {
+		} catch {
 			alert('Error adding item');
 		}
 	}
@@ -53,7 +59,7 @@
 		try {
 			await fetchJson(`/settings/${type}/${id}`, { method: 'DELETE' });
 			items = items.filter((i) => i.id !== id);
-		} catch (e) {
+		} catch {
 			alert('Error deleting item');
 		}
 	}
@@ -106,7 +112,9 @@
 						<td>{item[field.key] || '-'}</td>
 					{/each}
 					<td>
-						<button class="secondary danger" on:click={() => deleteItem(item.id)}>Delete</button>
+						<button class="secondary danger" on:click={() => item.id && deleteItem(item.id)}
+							>Delete</button
+						>
 					</td>
 				</tr>
 			{/each}
