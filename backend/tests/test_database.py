@@ -1,7 +1,7 @@
 import os
 from unittest.mock import patch
 from sqlmodel import Session, SQLModel
-from backend.database import get_session, create_db_and_tables, engine
+from backend.database import get_session, create_db_and_tables
 
 
 class TestDatabase:
