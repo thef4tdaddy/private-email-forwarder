@@ -34,7 +34,26 @@ def process_emails():
                         fetched = EmailService.fetch_recent_emails(user, pwd, server)
                         all_emails.extend(fetched)
         except json.JSONDecodeError:
-            print("❌ Error parsing EMAIL_ACCOUNTS JSON")
+            # 1a. Try to be forgiving (config vars often have single quotes by mistake)
+            try:
+                print(f"⚠️ Invalid JSON detected. Attempting auto-fix...")
+                fixed_json = email_accounts_json.replace("'", '"')
+                accounts = json.loads(fixed_json)
+                if isinstance(accounts, list):
+                    print("✅ Auto-fix successful. Proceeding with fixed config.")
+                    # Re-run loop with fixed accounts
+                    for acc in accounts:
+                        user = acc.get("email")
+                        pwd = acc.get("password")
+                        server = acc.get("imap_server", "imap.gmail.com")
+                        
+                        if user and pwd:
+                            print(f"   Scanning {user}...")
+                            fetched = EmailService.fetch_recent_emails(user, pwd, server)
+                            all_emails.extend(fetched)
+            except Exception as e:
+                 print(f"❌ Critical Error parsing EMAIL_ACCOUNTS JSON: {e}")
+                 print(f"   Raw Value: {email_accounts_json}")
 
     # 2. Fallback to Legacy Single Account (if no accounts processed yet)
     if not all_emails and not email_accounts_json:
