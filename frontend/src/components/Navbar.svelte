@@ -17,7 +17,7 @@
 			<img
 				src="/assets/LogoWithText.svg"
 				alt="SentinelShare"
-				class="h-12 w-auto border-2 border-primary/20 bg-white rounded-lg p-0.5 shadow-sm"
+				class="h-14 w-auto border-2 border-primary bg-white rounded-lg shadow-sm"
 			/>
 		</div>
 

@@ -52,70 +52,79 @@
 					>
 						<div class="flex items-center gap-1"><Clock size={12} /> Date</div>
 					</th>
-					<th
-						class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+					<th class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 first:rounded-tl-lg"
+						>Status</th
 					>
-						Subject
-					</th>
+					<th class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50">Subject</th>
+					<th class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50">Account</th>
+					<th class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50">Category</th>
 					<th
-						class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+						class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 w-32 text-right rounded-tr-lg"
+						>Time</th
 					>
-						<div class="flex items-center gap-1"><User size={12} /> Sender</div>
-					</th>
-					<th
-						class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
-					>
-						<div class="flex items-center gap-1"><ActivityIcon size={12} /> Status</div>
-					</th>
-					<th
-						class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50 rounded-r-lg"
-					>
-						<div class="flex items-center gap-1"><Tag size={12} /> Category</div>
-					</th>
 				</tr>
 			</thead>
-			<tbody class="text-sm">
-				{#each activities as item (item.id || item.processed_at)}
+			<tbody>
+				{#each activities as item (item.id)}
 					<tr
-						class="group hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0"
+						class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors group"
 					>
-						<td class="py-4 px-4 text-text-secondary font-medium whitespace-nowrap">
-							{formatDate(item.processed_at)}
-						</td>
-						<td
-							class="py-4 px-4 font-medium text-text-main group-hover:text-primary transition-colors max-w-[200px] truncate"
-							title={item.subject}
-						>
-							{item.subject}
-						</td>
-						<td class="py-4 px-4 text-text-secondary max-w-[150px] truncate" title={item.sender}>
-							{item.sender}
-						</td>
-						<td class="py-4 px-4">
+						<td class="py-3 px-4">
 							<span
-								class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {getStatusColor(
-									item.status
-								)} capitalize"
+								class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm
+                        {item.status === 'forwarded'
+									? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+									: item.status === 'blocked' || item.status === 'ignored'
+										? 'bg-gray-100 text-gray-600 border border-gray-200'
+										: 'bg-red-100 text-red-800 border border-red-200'}"
 							>
+								{#if item.status === 'forwarded'}
+									<ActivityIcon size={12} class="mr-1" />
+								{:else}
+									<Ban size={12} class="mr-1" />
+								{/if}
 								{item.status}
 							</span>
 						</td>
-						<td class="py-4 px-4">
-							{#if item.category}
-								<span
-									class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200"
-								>
-									{item.category}
-								</span>
+						<td class="py-3 px-4 font-medium text-text-main">
+							<div class="flex items-center gap-2">
+								<span class="truncate max-w-[200px]" title={item.subject}>{item.subject}</span>
+							</div>
+						</td>
+						<td class="py-3 px-4 text-text-secondary">
+							{#if item.account_email}
+								<div class="flex items-center gap-1 text-xs">
+									<User size={12} />
+									{item.account_email}
+								</div>
+							{:else}
+								<span class="text-gray-300">-</span>
 							{/if}
+						</td>
+						<td class="py-3 px-4 text-text-secondary">
+							<div class="flex items-center gap-1.5">
+								<Tag size={13} class="text-gray-400" />
+								{item.category || 'Uncategorized'}
+							</div>
+						</td>
+						<td class="py-3 px-4 text-right text-text-secondary w-32 whitespace-nowrap">
+							<div class="flex items-center justify-end gap-1.5">
+								<Clock size={13} class="text-gray-400" />
+								{new Date(item.processed_at).toLocaleTimeString([], {
+									hour: '2-digit',
+									minute: '2-digit'
+								})}
+							</div>
 						</td>
 					</tr>
 				{:else}
 					<tr>
 						<td colspan="5" class="py-12 text-center text-text-secondary">
-							<div class="flex flex-col items-center justify-center gap-2">
-								<FileText size={32} class="opacity-20" />
-								<p>No activity found yet.</p>
+							<div class="flex flex-col items-center justify-center gap-3">
+								<div class="bg-gray-100 p-3 rounded-full">
+									<FileText size={24} class="text-gray-400" />
+								</div>
+								<p>No activity found.</p>
 							</div>
 						</td>
 					</tr>

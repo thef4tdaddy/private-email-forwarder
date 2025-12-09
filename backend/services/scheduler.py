@@ -2,13 +2,12 @@ import os
 from datetime import datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from sqlmodel import Session, select
-
 from backend.database import engine, get_session
 from backend.models import GlobalSettings, ProcessedEmail
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
+from sqlmodel import Session, select
 
 scheduler = BackgroundScheduler()
 
@@ -121,12 +120,13 @@ def process_emails():
                 received_at=datetime.utcnow(),  # Approximate
                 processed_at=datetime.utcnow(),
                 status=status,
+                account_email=user,  # helper var from loop
                 category=category,
                 reason=reason,
             )
             session.add(processed)
             session.commit()
-            print(f"💾 Saved email status: {status}")
+            print(f"💾 Saved email status: {status} (Account: {user})")
 
 
 def start_scheduler():
