@@ -100,3 +100,201 @@ def test_transactional_score_high_matches():
     # Total > 3
     assert ReceiptDetector.calculate_transactional_score(email.subject, email.body, email.sender) >= 3
     assert ReceiptDetector.is_receipt(email) == True
+
+def test_categorize_receipt_amazon():
+    email = MockEmail(
+        subject="Order Confirmation",
+        body="Your order from Amazon",
+        sender="auto-confirm@amazon.com"
+    )
+    assert ReceiptDetector.categorize_receipt(email) == "amazon"
+
+def test_categorize_receipt_transportation():
+    email = MockEmail(
+        subject="Trip Receipt",
+        body="Your Uber trip",
+        sender="receipts@uber.com"
+    )
+    assert ReceiptDetector.categorize_receipt(email) == "transportation"
+    
+    email2 = MockEmail(
+        subject="Ride Receipt",
+        body="Thanks for riding",
+        sender="noreply@lyft.com"
+    )
+    assert ReceiptDetector.categorize_receipt(email2) == "transportation"
+
+def test_categorize_receipt_food_delivery():
+    email = MockEmail(
+        subject="Order Confirmation",
+        body="Your DoorDash order",
+        sender="no-reply@doordash.com"
+    )
+    assert ReceiptDetector.categorize_receipt(email) == "food-delivery"
+
+def test_categorize_receipt_restaurants():
+    email = MockEmail(
+        subject="Order Receipt",
+        body="Thank you for your order",
+        sender="orders@starbucks.com"
+    )
+    assert ReceiptDetector.categorize_receipt(email) == "restaurants"
+
+def test_categorize_receipt_retail():
+    email = MockEmail(
+        subject="Purchase Confirmation",
+        body="Thank you for shopping",
+        sender="orders@walmart.com"
+    )
+    assert ReceiptDetector.categorize_receipt(email) == "retail"
+
+def test_categorize_receipt_subscriptions():
+    email = MockEmail(
+        subject="Subscription Receipt",
+        body="Your monthly subscription",
+        sender="billing@netflix.com"
+    )
+    assert ReceiptDetector.categorize_receipt(email) == "subscriptions"
+
+def test_categorize_receipt_payments():
+    email = MockEmail(
+        subject="Payment Received",
+        body="You've got money",
+        sender="service@paypal.com"
+    )
+    assert ReceiptDetector.categorize_receipt(email) == "payments"
+
+def test_categorize_receipt_utilities():
+    email = MockEmail(
+        subject="Bill Ready",
+        body="Your monthly bill",
+        sender="billing@att.com"
+    )
+    assert ReceiptDetector.categorize_receipt(email) == "utilities"
+
+def test_categorize_receipt_healthcare():
+    email = MockEmail(
+        subject="Prescription Ready",
+        body="Your prescription is ready",
+        sender="pharmacy@cvs.com"
+    )
+    assert ReceiptDetector.categorize_receipt(email) == "healthcare"
+
+def test_categorize_receipt_government():
+    email = MockEmail(
+        subject="Tax Notice",
+        body="Tax payment received",
+        sender="noreply@irs.gov"
+    )
+    assert ReceiptDetector.categorize_receipt(email) == "government"
+
+def test_categorize_receipt_other():
+    email = MockEmail(
+        subject="Order Confirmation",
+        body="Thank you",
+        sender="info@randomshop.com"
+    )
+    assert ReceiptDetector.categorize_receipt(email) == "other"
+
+def test_get_detection_confidence_promotional():
+    email = MockEmail(
+        subject="Sale! 50% off",
+        body="Shop now and save",
+        sender="marketing@shop.com"
+    )
+    # Promotional emails should have 0 confidence
+    assert ReceiptDetector.get_detection_confidence(email) == 0
+
+def test_get_detection_confidence_high():
+    email = MockEmail(
+        subject="Receipt for your order",
+        body="Thank you for your order. Order #123456. Total: $50.00",
+        sender="auto-confirm@amazon.com"
+    )
+    # Strong indicators (40) + transactional score (high) + known sender (20) + confirmation (10)
+    confidence = ReceiptDetector.get_detection_confidence(email)
+    assert confidence >= 70
+
+def test_get_detection_confidence_medium():
+    email = MockEmail(
+        subject="Payment received",
+        body="Your order #12345678 total: $20.00",
+        sender="shop@example.com"
+    )
+    confidence = ReceiptDetector.get_detection_confidence(email)
+    # This email has order # (2 pts) and amount (2 pts) * 10 = 40, should have moderate confidence
+    assert confidence >= 40
+
+def test_get_detection_confidence_low():
+    email = MockEmail(
+        subject="Hello",
+        body="Just saying hi",
+        sender="friend@example.com"
+    )
+    confidence = ReceiptDetector.get_detection_confidence(email)
+    assert confidence == 0
+
+def test_is_known_receipt_sender():
+    assert ReceiptDetector.is_known_receipt_sender("auto-confirm@amazon.com") == True
+    assert ReceiptDetector.is_known_receipt_sender("service@paypal.com") == True
+    assert ReceiptDetector.is_known_receipt_sender("receipts@uber.com") == True
+    assert ReceiptDetector.is_known_receipt_sender("random@example.com") == False
+
+def test_has_transaction_confirmation():
+    assert ReceiptDetector.has_transaction_confirmation("Order Confirmation", "Receipt") == True
+    assert ReceiptDetector.has_transaction_confirmation("Invoice #123", "Payment received") == True
+    assert ReceiptDetector.has_transaction_confirmation("Your order #456", "Total: $50.00") == True
+    assert ReceiptDetector.has_transaction_confirmation("Hello", "Just a message") == False
+
+def test_has_strong_receipt_indicators_with_evidence():
+    # Strong keyword + supporting evidence
+    assert ReceiptDetector.has_strong_receipt_indicators(
+        "Your receipt is ready",
+        "Order #123456 Total: $50.00"
+    ) == True
+
+def test_has_strong_receipt_indicators_without_evidence():
+    # Strong keyword but no supporting evidence
+    assert ReceiptDetector.has_strong_receipt_indicators(
+        "Receipt",
+        "Just a receipt mention"
+    ) == False
+
+def test_is_reply_or_forward_patterns():
+    # Test various reply patterns
+    assert ReceiptDetector.is_reply_or_forward("Re: Order Confirmation", "sender@example.com") == True
+    assert ReceiptDetector.is_reply_or_forward("Fwd: Receipt", "sender@example.com") == True
+    assert ReceiptDetector.is_reply_or_forward("FW: Your Order", "sender@example.com") == True
+    assert ReceiptDetector.is_reply_or_forward("Forward: Important", "sender@example.com") == True
+    assert ReceiptDetector.is_reply_or_forward("[FWD] Check this", "sender@example.com") == True
+    assert ReceiptDetector.is_reply_or_forward("(fwd) See below", "sender@example.com") == True
+    assert ReceiptDetector.is_reply_or_forward("Your Order", "sender@example.com") == False
+
+def test_email_dict_format():
+    # Test that detector works with dict format emails
+    email_dict = {
+        "subject": "Order Confirmation",
+        "body": "Thank you for your order. Order #123456. Total: $50.00",
+        "sender": "orders@shop.com"
+    }
+    assert ReceiptDetector.is_receipt(email_dict) == True
+
+def test_email_with_from_field():
+    # Test email with 'from' field instead of 'sender'
+    class EmailWithFrom:
+        def __init__(self):
+            self.subject = "Receipt"
+            self.body = "Order #123456 Total: $50.00"
+            setattr(self, "from", "orders@shop.com")
+    
+    email = EmailWithFrom()
+    assert ReceiptDetector.is_receipt(email) == True
+
+def test_promotional_patterns():
+    # Test various promotional patterns
+    assert ReceiptDetector.is_promotional_email("20% off today!", "Shop now", "sales@shop.com") == True
+    assert ReceiptDetector.is_promotional_email("Save $50", "Limited time", "marketing@shop.com") == True
+    assert ReceiptDetector.is_promotional_email("Free shipping", "Check this week", "deals@shop.com") == True
+    assert ReceiptDetector.is_promotional_email("Weekly deals", "Best deals this week", "digest@shop.com") == True
+    assert ReceiptDetector.is_promotional_email("", "Check out unsubscribe here", "promo@shop.com") == True
+    assert ReceiptDetector.is_promotional_email("", "Visit awstrack.me/link", "marketing@shop.com") == True
