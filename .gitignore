@@ -2,25 +2,42 @@
 node_modules
 .pnp
 .pnp.js
-
-# Testing
-/coverage
-htmlcov/
-.coverage
-
-# Production
-build
-.env
-.next
-# Misc
-.DS_Store
-.vscode
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Testing
+/coverage
+coverage/
+
+# Production
+build
+dist
+dist-ssr
+.env
+.next
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Python/Backend
 venv/
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Database
 local_dev.db
