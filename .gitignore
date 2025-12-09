@@ -5,6 +5,8 @@ node_modules
 
 # Testing
 /coverage
+htmlcov/
+.coverage
 
 # Production
 build
@@ -19,3 +21,7 @@ yarn-error.log*
 venv/
 __pycache__/
 *.py[cod]
+
+# Database
+local_dev.db
+*.db
