@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from backend.services.email_service import EmailService
 import email
 from email.mime.text import MIMEText
