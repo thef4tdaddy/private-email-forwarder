@@ -4,7 +4,7 @@
 		subject: string;
 		sender: string;
 		status: string;
-		category?: string;
+		category?: string | null;
 	}
 
 	export let activities: Activity[] = [];
