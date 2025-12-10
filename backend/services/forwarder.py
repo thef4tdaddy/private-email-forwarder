@@ -58,7 +58,7 @@ class EmailForwarder:
                 ).first()
                 if setting:
                     template = setting.value
-        except:
+        except Exception:
             pass  # Use default template if DB access fails
         
         # Create body by substituting variables in template
