@@ -1,7 +1,16 @@
 <script lang="ts">
 	import { fetchJson } from '../lib/api';
 	import { onMount } from 'svelte';
-	import { Clock, Mail, CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight, History as HistoryIcon } from 'lucide-svelte';
+	import {
+		Clock,
+		Mail,
+		CheckCircle,
+		XCircle,
+		AlertCircle,
+		ChevronLeft,
+		ChevronRight,
+		History as HistoryIcon
+	} from 'lucide-svelte';
 
 	interface Email {
 		id: number;
@@ -58,6 +67,7 @@
 	async function loadHistory() {
 		loading = true;
 		try {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity
 			const params = new URLSearchParams({
 				page: pagination.page.toString(),
 				per_page: pagination.per_page.toString()
@@ -145,7 +155,9 @@
 
 <div class="mb-8">
 	<h2 class="text-2xl font-bold text-text-main mb-1">History</h2>
-	<p class="text-text-secondary text-sm">Complete history of email processing and automated runs.</p>
+	<p class="text-text-secondary text-sm">
+		Complete history of email processing and automated runs.
+	</p>
 </div>
 
 <!-- Stats Cards -->
@@ -205,7 +217,7 @@
 		class="px-4 py-2 font-medium transition-all {activeTab === 'emails'
 			? 'text-primary border-b-2 border-primary'
 			: 'text-text-secondary hover:text-text-main'}"
-		on:click={() => activeTab = 'emails'}
+		on:click={() => (activeTab = 'emails')}
 	>
 		All Emails
 	</button>
@@ -213,7 +225,7 @@
 		class="px-4 py-2 font-medium transition-all {activeTab === 'runs'
 			? 'text-primary border-b-2 border-primary'
 			: 'text-text-secondary hover:text-text-main'}"
-		on:click={() => activeTab = 'runs'}
+		on:click={() => (activeTab = 'runs')}
 	>
 		Processing Runs
 	</button>
@@ -255,9 +267,7 @@
 			</div>
 
 			<div class="flex-1 min-w-[200px]">
-				<label for="date-to" class="block text-sm font-medium text-text-main mb-2">
-					To Date
-				</label>
+				<label for="date-to" class="block text-sm font-medium text-text-main mb-2"> To Date </label>
 				<input
 					id="date-to"
 					type="datetime-local"
@@ -285,22 +295,34 @@
 			<table class="w-full text-left border-collapse">
 				<thead>
 					<tr class="border-b border-gray-100">
-						<th class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50">
+						<th
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+						>
 							Status
 						</th>
-						<th class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50">
+						<th
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+						>
 							Subject
 						</th>
-						<th class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50">
+						<th
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+						>
 							Sender
 						</th>
-						<th class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50">
+						<th
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+						>
 							Category
 						</th>
-						<th class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50">
+						<th
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+						>
 							Amount
 						</th>
-						<th class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50">
+						<th
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+						>
 							Processed
 						</th>
 					</tr>
@@ -328,10 +350,14 @@
 						</tr>
 					{:else}
 						{#each emails as email (email.id)}
-							<tr class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors">
+							<tr
+								class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors"
+							>
 								<td class="py-3 px-4">
 									<span
-										class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(email.status)}"
+										class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(
+											email.status
+										)}"
 									>
 										<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
 										{email.status}
@@ -417,8 +443,10 @@
 					</div>
 				</div>
 			{:else}
-				{#each runs as run}
-					<div class="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary transition-colors">
+				{#each runs as run (run.run_time)}
+					<div
+						class="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary transition-colors"
+					>
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-2">
 								<Clock size={16} class="text-primary" />

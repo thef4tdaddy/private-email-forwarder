@@ -5,6 +5,11 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from urllib.parse import urlparse
 
+from backend.constants import DEFAULT_EMAIL_TEMPLATE
+from backend.database import engine
+from backend.models import GlobalSettings
+from sqlmodel import Session, select
+
 
 class EmailForwarder:
     @staticmethod
@@ -58,9 +63,25 @@ class EmailForwarder:
         msg["To"] = target_email
         msg["Subject"] = f"Fwd: {original_email_data.get('subject', 'No Subject')}"
 
-        # Create body
-        body_text = f"Forwarding receipt from {original_email_data.get('from')}:\n\n"
-        body_text += original_email_data.get("body", "")
+        # Get template from database
+        template = DEFAULT_EMAIL_TEMPLATE
+        try:
+            with Session(engine) as session:
+                setting = session.exec(
+                    select(GlobalSettings).where(GlobalSettings.key == "email_template")
+                ).first()
+                if setting:
+                    template = setting.value
+        except Exception:
+            pass  # Use default template if DB access fails
+
+        # Create body by substituting variables in template
+        body_text = template
+        body_text = body_text.replace(
+            "{subject}", original_email_data.get("subject", "No Subject")
+        )
+        body_text = body_text.replace("{from}", original_email_data.get("from", ""))
+        body_text = body_text.replace("{body}", original_email_data.get("body", ""))
 
         msg.attach(MIMEText(body_text, "plain"))
 

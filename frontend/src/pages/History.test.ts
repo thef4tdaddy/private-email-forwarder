@@ -32,7 +32,7 @@ describe('History Component', () => {
 		};
 		const mockRuns = { runs: [] };
 
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
@@ -62,7 +62,7 @@ describe('History Component', () => {
 		};
 		const mockRuns = { runs: [] };
 
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
@@ -107,7 +107,7 @@ describe('History Component', () => {
 		};
 		const mockRuns = { runs: [] };
 
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
@@ -136,7 +136,7 @@ describe('History Component', () => {
 		};
 		const mockRuns = { runs: [] };
 
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
@@ -176,7 +176,7 @@ describe('History Component', () => {
 			]
 		};
 
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
@@ -225,7 +225,7 @@ describe('History Component', () => {
 			]
 		};
 
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
@@ -256,7 +256,7 @@ describe('History Component', () => {
 		};
 		const mockRuns = { runs: [] };
 
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
@@ -273,7 +273,7 @@ describe('History Component', () => {
 	it('handles API errors gracefully', async () => {
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-		(api.fetchJson as any).mockRejectedValueOnce(new Error('API Error'));
+		vi.mocked(api.fetchJson).mockRejectedValueOnce(new Error('API Error'));
 
 		render(History);
 
@@ -299,7 +299,7 @@ describe('History Component', () => {
 		};
 		const mockRuns = { runs: [] };
 
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
@@ -343,7 +343,7 @@ describe('History Component', () => {
 		};
 		const mockRuns = { runs: [] };
 
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
@@ -372,7 +372,7 @@ describe('History Component', () => {
 		};
 		const mockRuns = { runs: [] };
 
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
@@ -404,7 +404,7 @@ describe('History Component', () => {
 		const mockRuns = { runs: [] };
 
 		// Mock returns for initial load and filter change
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns)
@@ -428,9 +428,7 @@ describe('History Component', () => {
 
 		// Verify API was called with status parameter
 		await waitFor(() => {
-			expect(api.fetchJson).toHaveBeenCalledWith(
-				expect.stringContaining('status=forwarded')
-			);
+			expect(api.fetchJson).toHaveBeenCalledWith(expect.stringContaining('status=forwarded'));
 		});
 	});
 
@@ -450,7 +448,7 @@ describe('History Component', () => {
 		const mockRuns = { runs: [] };
 
 		// Mock returns for initial load, filter change, and clear filters
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns)
@@ -502,7 +500,7 @@ describe('History Component', () => {
 		const mockRuns = { runs: [] };
 
 		// Mock returns for initial load and filter change
-		(api.fetchJson as any)
+		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce(mockHistory)
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns)
@@ -526,9 +524,7 @@ describe('History Component', () => {
 
 		// Verify API was called with page=1
 		await waitFor(() => {
-			expect(api.fetchJson).toHaveBeenCalledWith(
-				expect.stringMatching(/page=1/)
-			);
+			expect(api.fetchJson).toHaveBeenCalledWith(expect.stringMatching(/page=1/));
 		});
 	});
 });

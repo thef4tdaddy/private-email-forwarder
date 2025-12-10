@@ -1,6 +1,37 @@
 from unittest.mock import Mock, patch
 from backend.services.forwarder import EmailForwarder
+from backend.models import GlobalSettings
+from backend.database import engine, create_db_and_tables
+from sqlmodel import Session, select
 import os
+import pytest
+
+
+@pytest.fixture
+def clean_email_template():
+    """Fixture to clean up email template before and after tests"""
+    # Ensure tables exist
+    create_db_and_tables()
+    
+    # Clean up before test
+    with Session(engine) as session:
+        setting = session.exec(
+            select(GlobalSettings).where(GlobalSettings.key == "email_template")
+        ).first()
+        if setting:
+            session.delete(setting)
+            session.commit()
+    
+    yield
+    
+    # Clean up after test
+    with Session(engine) as session:
+        setting = session.exec(
+            select(GlobalSettings).where(GlobalSettings.key == "email_template")
+        ).first()
+        if setting:
+            session.delete(setting)
+            session.commit()
 
 
 class TestEmailForwarder:
@@ -208,3 +239,67 @@ class TestEmailForwarder:
         
         # Should fail since no valid credentials
         assert result == False
+    
+    @patch('backend.services.forwarder.smtplib.SMTP')
+    @patch.dict(os.environ, {
+        'SENDER_EMAIL': 'sender@example.com',
+        'SENDER_PASSWORD': 'password123'
+    })
+    def test_forward_email_with_custom_template(self, mock_smtp, clean_email_template):
+        """Test that custom template is used when set in database"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+        
+        # Store custom template in database
+        with Session(engine) as session:
+            custom_template = "Custom template: {subject} from {from}\n\nContent:\n{body}"
+            setting = GlobalSettings(
+                key="email_template",
+                value=custom_template,
+                description="Test template"
+            )
+            session.add(setting)
+            session.commit()
+        
+        original_email = {
+            'subject': 'Test Receipt',
+            'from': 'shop@example.com',
+            'body': 'Order content here'
+        }
+        
+        result = EmailForwarder.forward_email(original_email, 'target@example.com')
+        
+        assert result == True
+        # Verify the message was sent
+        mock_server.send_message.assert_called_once()
+    
+    @patch('backend.services.forwarder.smtplib.SMTP')
+    @patch.dict(os.environ, {
+        'SENDER_EMAIL': 'sender@example.com',
+        'SENDER_PASSWORD': 'password123'
+    })
+    def test_forward_email_template_variable_substitution(self, mock_smtp, clean_email_template):
+        """Test that template variables are properly substituted"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+        
+        # Store template with all variables
+        with Session(engine) as session:
+            template = "Subject: {subject}\nFrom: {from}\nBody: {body}"
+            setting = GlobalSettings(
+                key="email_template",
+                value=template,
+                description="Test template"
+            )
+            session.add(setting)
+            session.commit()
+        
+        original_email = {
+            'subject': 'Test Subject',
+            'from': 'test@example.com',
+            'body': 'Test Body'
+        }
+        
+        result = EmailForwarder.forward_email(original_email, 'target@example.com')
+        
+        assert result == True
