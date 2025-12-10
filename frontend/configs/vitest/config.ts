@@ -9,6 +9,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: [path.resolve(__dirname, '../../src/setupTest.ts')],
     globals: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'json-summary'],
+    },
   },
   resolve: {
     conditions: ['browser'],

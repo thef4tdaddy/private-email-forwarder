@@ -1,0 +1,171 @@
+name: Coverage Check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 1" # Run every Monday
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  backend-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run Backend Coverage
+        run: |
+          cd backend
+          # Run coverage and generate JSON report
+          pytest --cov=. --cov-report=json:coverage.json tests/
+
+      - name: Analyze Coverage & Create Issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd backend
+          python <<EOF
+          import json
+          import os
+          import subprocess
+
+          try:
+              with open('coverage.json') as f:
+                  data = json.load(f)
+              
+              for file_path, file_data in data['files'].items():
+                  summary = file_data['summary']
+                  if summary['percent_covered'] < 100:
+                      missing_lines = file_data['missing_lines']
+                      relative_path = f"backend/{file_path}"
+                      
+                      title = f"Improve coverage: {relative_path}"
+                      body = f"""
+                      File: \`{relative_path}\` has {summary['percent_covered']:.2f}% coverage.
+                      
+                      **Missing Lines:** {missing_lines}
+                      
+                      Please add tests to cover these lines.
+                      """
+                      
+                      # Check if issue already exists to avoid duplicates (basic check)
+                      check_cmd = ['gh', 'issue', 'list', '--search', f"\"{title}\" in:title", '--json', 'title']
+                      existing = subprocess.check_output(check_cmd).decode()
+                      
+                      if title not in existing:
+                          print(f"Creating issue for {relative_path}...")
+                          subprocess.run(['gh', 'issue', 'create', '--title', title, '--body', body])
+                      else:
+                          print(f"Issue for {relative_path} already exists.")
+                          
+          except FileNotFoundError:
+              print("No coverage report found.")
+          except Exception as e:
+              print(f"Error processing coverage: {e}")
+          EOF
+
+  frontend-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run Frontend Coverage
+        run: |
+          cd frontend
+          npm run coverage
+
+      - name: Analyze Coverage & Create Issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd frontend
+          python <<EOF
+          import json
+          import os
+          import subprocess
+
+          try:
+              # Vitest v8 provider outputs coverage-final.json or we can look at coverage-summary.json
+              # coverage-final.json (Istanbul format) is detailed.
+              # Let's use coverage-summary.json for a simpler check first, or parse the details.
+              # Vitest's 'json' reporter usually outputs to 'coverage/coverage-final.json'
+              
+              # Actually, verify the path first. Default is coverage/
+              report_path = 'coverage/coverage-final.json'
+              
+              with open(report_path) as f:
+                  data = json.load(f)
+              
+              # Data keys are absolute paths, likely needing normalization
+              repo_root = os.getcwd() # Should be frontend dir
+              
+              for file_abs_path, file_data in data.items():
+                  # Calculate coverage from statement map and hit counts
+                  statements = file_data['statementMap']
+                  s_hits = file_data['s']
+                  total = len(statements)
+                  covered = sum(1 for k, v in s_hits.items() if v > 0)
+                  
+                  pct = (covered / total * 100) if total > 0 else 100
+                  
+                  if pct < 100:
+                      # Identify lines
+                      missing_lines = []
+                      for k, v in s_hits.items():
+                          if v == 0:
+                              start_line = statements[k]['start']['line']
+                              missing_lines.append(start_line)
+                      
+                      # Simplify missing lines list (ranges) could be done but just listing is fine
+                      missing_str = ", ".join(map(str, sorted(list(set(missing_lines)))))
+                      
+                      # Normalize path for issue title
+                      rel_path = os.path.relpath(file_abs_path, repo_root) 
+                      # Fix double frontend/frontend if needed or just use as is
+                      
+                      title = f"Improve coverage: frontend/{rel_path}"
+                      body = f"""
+                      File: \`frontend/{rel_path}\` has {pct:.2f}% statement coverage.
+                      
+                      **Missing Lines:** {missing_str}
+                      
+                      Please add tests to cover these lines.
+                      """
+                      
+                      check_cmd = ['gh', 'issue', 'list', '--search', f"\"{title}\" in:title", '--json', 'title']
+                      existing = subprocess.check_output(check_cmd).decode()
+                      
+                      if title not in existing:
+                          print(f"Creating issue for frontend/{rel_path}...")
+                          subprocess.run(['gh', 'issue', 'create', '--title', title, '--body', body])
+                      else:
+                          print(f"Issue for frontend/{rel_path} already exists.")
+
+          except FileNotFoundError:
+              print("No coverage report found at coverage/coverage-final.json")
+          except Exception as e:
+              print(f"Error processing coverage: {e}")
+          EOF
