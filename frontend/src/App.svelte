@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Navbar from './components/Navbar.svelte';
 	import Dashboard from './pages/Dashboard.svelte';
+	import History from './pages/History.svelte';
 	import Settings from './pages/Settings.svelte';
 	import './app.css';
 
@@ -17,6 +18,8 @@
 	<div class="container-custom">
 		{#if currentView === 'dashboard'}
 			<Dashboard />
+		{:else if currentView === 'history'}
+			<History />
 		{:else if currentView === 'settings'}
 			<Settings />
 		{/if}

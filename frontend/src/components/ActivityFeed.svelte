@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FileText, Clock, User, Tag, Activity as ActivityIcon } from 'lucide-svelte';
+	import { FileText, Clock, User, Tag, Activity as ActivityIcon, Ban } from 'lucide-svelte';
 
 	interface Activity {
 		id: number;
