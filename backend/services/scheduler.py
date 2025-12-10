@@ -54,6 +54,9 @@ def process_emails():
                         if user and pwd:
                             print(f"   Scanning {user}...")
                             fetched = EmailService.fetch_recent_emails(user, pwd, server)
+                            # Tag each email with the source account
+                            for email_data in fetched:
+                                email_data["account_email"] = user
                             all_emails.extend(fetched)
             except json.JSONDecodeError:
                 # 1a. Try to be forgiving (config vars often have single quotes by mistake)
@@ -74,6 +77,9 @@ def process_emails():
                                 fetched = EmailService.fetch_recent_emails(
                                     user, pwd, server
                                 )
+                                # Tag each email with the source account
+                                for email_data in fetched:
+                                    email_data["account_email"] = user
                                 all_emails.extend(fetched)
                 except Exception as e:
                     print(f"❌ Critical Error parsing EMAIL_ACCOUNTS JSON: {e}")
@@ -89,7 +95,11 @@ def process_emails():
 
             if user and pwd:
                 print(f"👤 Processing single account {user}...")
-                all_emails = EmailService.fetch_recent_emails(user, pwd, server)
+                fetched = EmailService.fetch_recent_emails(user, pwd, server)
+                # Tag each email with the source account
+                for email_data in fetched:
+                    email_data["account_email"] = user
+                all_emails = fetched
 
         emails = all_emails
 
@@ -141,6 +151,9 @@ def process_emails():
 
                 # This is a new email to process
                 emails_processed_count += 1
+                
+                # Get the account this email belongs to
+                account_email = email_data.get("account_email", "unknown")
 
                 # Detect
                 is_receipt = ReceiptDetector.is_receipt(email_data)
@@ -171,13 +184,13 @@ def process_emails():
                     received_at=datetime.utcnow(),  # Approximate
                     processed_at=datetime.utcnow(),
                     status=status,
-                    account_email=user,  # helper var from loop
+                    account_email=account_email,
                     category=category,
                     reason=reason,
                 )
                 session.add(processed)
                 session.commit()
-                print(f"💾 Saved email status: {status} (Account: {user})")
+                print(f"💾 Saved email status: {status} (Account: {account_email})")
 
             # Update the processing run with final counts
             run = session.get(ProcessingRun, run_id)
