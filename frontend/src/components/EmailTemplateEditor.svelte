@@ -65,7 +65,6 @@
 <div class="card">
 	<div class="p-6">
 		<div class="mb-6">
-			<h4 class="text-lg font-bold text-text-main mb-2">Email Template</h4>
 			<p class="text-sm text-text-secondary">
 				Customize how forwarded emails appear. Use variables like <code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600"
 					>{'{subject}'}</code
