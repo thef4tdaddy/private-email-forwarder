@@ -36,7 +36,7 @@ class EmailForwarder:
                             smtp_server = "smtp.mail.me.com"
                         elif hostname and hostname.startswith("imap."):
                             # Try guessing smtp.domain
-                            smtp_server = imap_s.replace("imap.", "smtp.", 1)
+                            smtp_server = hostname.replace("imap.", "smtp.", 1)
             except:
                 pass
 
