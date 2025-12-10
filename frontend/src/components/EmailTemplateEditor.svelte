@@ -20,6 +20,7 @@
 			originalTemplate = template;
 		} catch {
 			console.error('Error loading template');
+			alert('Error loading template');
 		} finally {
 			loading = false;
 		}
