@@ -5,6 +5,7 @@ from sqlmodel import Session, create_engine, SQLModel, select
 from sqlmodel.pool import StaticPool
 from backend.models import ProcessingRun, ProcessedEmail
 from backend.services.scheduler import process_emails, start_scheduler
+import backend.services.scheduler as scheduler_module
 
 
 @pytest.fixture(name="session")
@@ -42,7 +43,6 @@ def test_process_emails_creates_run_with_no_emails(
     mock_engine_patch.connect.return_value.__enter__.return_value = engine.connect()
     
     # Use our test engine in the scheduler module
-    import backend.services.scheduler as scheduler_module
     original_engine = scheduler_module.engine
     scheduler_module.engine = engine
     
@@ -98,7 +98,6 @@ def test_process_emails_creates_run_with_emails(
 ):
     """Test that process_emails creates a ProcessingRun record with correct counts"""
     # Use our test engine in the scheduler module
-    import backend.services.scheduler as scheduler_module
     original_engine = scheduler_module.engine
     scheduler_module.engine = engine
     
@@ -169,7 +168,6 @@ def test_start_scheduler_uses_poll_interval(mock_scheduler):
 def test_process_emails_records_error(mock_fetch, mock_engine_patch, engine):
     """Test that errors during processing are recorded in ProcessingRun"""
     # Use our test engine in the scheduler module
-    import backend.services.scheduler as scheduler_module
     original_engine = scheduler_module.engine
     scheduler_module.engine = engine
     
@@ -217,7 +215,6 @@ def test_multi_account_email_tagging(
 ):
     """Test that emails from multiple accounts are correctly tagged with their source account"""
     # Use our test engine in the scheduler module
-    import backend.services.scheduler as scheduler_module
     original_engine = scheduler_module.engine
     scheduler_module.engine = engine
     
