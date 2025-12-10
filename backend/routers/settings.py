@@ -77,6 +77,12 @@ def get_email_template(session: Session = Depends(get_session)):
 @router.post("/email-template")
 def update_email_template(data: EmailTemplateUpdate, session: Session = Depends(get_session)):
     """Update the email template"""
+    # Validate input
+    if not data.template or not data.template.strip():
+        raise HTTPException(status_code=400, detail="Template cannot be empty")
+    if len(data.template) > 10000:
+        raise HTTPException(status_code=400, detail="Template too long (max 10,000 characters)")
+    
     setting = session.exec(
         select(GlobalSettings).where(GlobalSettings.key == "email_template")
     ).first()
