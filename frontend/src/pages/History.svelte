@@ -110,7 +110,7 @@
 	}
 
 	function formatAmount(amount?: number) {
-		if (!amount) return '-';
+		if (amount === undefined || amount === null) return '-';
 		return `$${amount.toFixed(2)}`;
 	}
 
