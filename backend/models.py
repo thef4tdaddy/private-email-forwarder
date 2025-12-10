@@ -58,4 +58,6 @@ class ProcessingRun(SQLModel, table=True):
     emails_forwarded: int = 0  # Number of emails forwarded
     status: str = "completed"  # "running", "completed", "error"
     error_message: Optional[str] = None
-    check_interval_minutes: Optional[int] = None  # The configured interval at the time of run
+    check_interval_minutes: Optional[int] = (
+        None  # The configured interval at the time of run
+    )

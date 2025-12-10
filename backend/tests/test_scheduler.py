@@ -1,11 +1,12 @@
 import os
-import pytest
 from unittest.mock import patch
-from sqlmodel import Session, create_engine, SQLModel, select
-from sqlmodel.pool import StaticPool
-from backend.models import ProcessingRun, ProcessedEmail
-from backend.services.scheduler import process_emails, start_scheduler
+
 import backend.services.scheduler as scheduler_module
+import pytest
+from backend.models import ProcessedEmail, ProcessingRun
+from backend.services.scheduler import process_emails, start_scheduler
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
 
 
 @pytest.fixture(name="session")
@@ -41,11 +42,11 @@ def test_process_emails_creates_run_with_no_emails(
     # Mock the engine to use our test engine
     mock_engine_patch.begin.return_value.__enter__.return_value = Session(engine)
     mock_engine_patch.connect.return_value.__enter__.return_value = engine.connect()
-    
+
     # Use our test engine in the scheduler module
     original_engine = scheduler_module.engine
     scheduler_module.engine = engine
-    
+
     try:
         # Mock fetch_recent_emails to return empty list
         mock_fetch.return_value = []
@@ -61,7 +62,7 @@ def test_process_emails_creates_run_with_no_emails(
         with Session(engine) as session:
             runs = session.exec(select(ProcessingRun)).all()
             assert len(runs) == 1
-            
+
             run = runs[0]
             assert run.emails_checked == 0
             assert run.emails_processed == 0
@@ -100,7 +101,7 @@ def test_process_emails_creates_run_with_emails(
     # Use our test engine in the scheduler module
     original_engine = scheduler_module.engine
     scheduler_module.engine = engine
-    
+
     try:
         # Mock email data
         mock_emails = [
@@ -129,7 +130,7 @@ def test_process_emails_creates_run_with_emails(
         with Session(engine) as session:
             runs = session.exec(select(ProcessingRun)).all()
             assert len(runs) == 1
-            
+
             run = runs[0]
             assert run.emails_checked == 2
             assert run.emails_processed == 2
@@ -151,18 +152,23 @@ def test_process_emails_creates_run_with_emails(
 def test_start_scheduler_uses_poll_interval(mock_scheduler):
     """Test that start_scheduler uses the POLL_INTERVAL from environment"""
     start_scheduler()
-    
+
     # Verify scheduler.add_job was called with correct interval
-    mock_scheduler.add_job.assert_called_once_with(process_emails, "interval", minutes=45)
-    
-    
-    
-    
-    
+    mock_scheduler.add_job.assert_called_once_with(
+        process_emails, "interval", minutes=45
+    )
+
     mock_scheduler.start.assert_called_once()
 
 
-@patch.dict(os.environ, {"POLL_INTERVAL": "30", "GMAIL_EMAIL": "test@example.com", "GMAIL_PASSWORD": "pass"})
+@patch.dict(
+    os.environ,
+    {
+        "POLL_INTERVAL": "30",
+        "GMAIL_EMAIL": "test@example.com",
+        "GMAIL_PASSWORD": "pass",
+    },
+)
 @patch("backend.services.scheduler.engine")
 @patch("backend.services.scheduler.EmailService.fetch_recent_emails")
 def test_process_emails_records_error(mock_fetch, mock_engine_patch, engine):
@@ -170,7 +176,7 @@ def test_process_emails_records_error(mock_fetch, mock_engine_patch, engine):
     # Use our test engine in the scheduler module
     original_engine = scheduler_module.engine
     scheduler_module.engine = engine
-    
+
     try:
         # Mock fetch to raise an exception
         mock_fetch.side_effect = Exception("IMAP connection failed")
@@ -182,7 +188,7 @@ def test_process_emails_records_error(mock_fetch, mock_engine_patch, engine):
         with Session(engine) as session:
             runs = session.exec(select(ProcessingRun)).all()
             assert len(runs) == 1
-            
+
             run = runs[0]
             assert run.status == "error"
             assert "IMAP connection failed" in run.error_message
@@ -217,7 +223,7 @@ def test_multi_account_email_tagging(
     # Use our test engine in the scheduler module
     original_engine = scheduler_module.engine
     scheduler_module.engine = engine
-    
+
     try:
         # Mock email data from different accounts
         emails_acc1 = [
@@ -236,7 +242,7 @@ def test_multi_account_email_tagging(
                 "body": "Thanks for your purchase",
             }
         ]
-        
+
         # Mock fetch_recent_emails to return different emails for different accounts
         def fetch_side_effect(user, pwd, server):
             if user == "acc1@example.com":
@@ -244,7 +250,7 @@ def test_multi_account_email_tagging(
             elif user == "acc2@example.com":
                 return emails_acc2.copy()
             return []
-        
+
         mock_fetch.side_effect = fetch_side_effect
         mock_is_receipt.return_value = True
         mock_categorize.return_value = "Shopping"
@@ -257,18 +263,18 @@ def test_multi_account_email_tagging(
         with Session(engine) as session:
             emails = session.exec(select(ProcessedEmail)).all()
             assert len(emails) == 2
-            
+
             # Find each email and verify its account_email
             msg1 = next(e for e in emails if e.email_id == "msg1")
             msg2 = next(e for e in emails if e.email_id == "msg2")
-            
+
             assert msg1.account_email == "acc1@example.com"
             assert msg2.account_email == "acc2@example.com"
-            
+
             # Verify both were processed
             assert msg1.status == "forwarded"
             assert msg2.status == "forwarded"
-            
+
             # Verify processing run was created
             runs = session.exec(select(ProcessingRun)).all()
             assert len(runs) == 1
