@@ -153,58 +153,37 @@ def get_recent_runs(
     limit: int = Query(20, ge=1, le=100), session: Session = Depends(get_session)
 ):
     """Get aggregated information about recent processing runs"""
+    # Query the actual ProcessingRun table
+    query = select(ProcessingRun).order_by(ProcessingRun.started_at.desc()).limit(limit)
+    runs_db = session.exec(query).all()
 
-    # Get all emails and group by processing time windows (e.g., 5-minute intervals)
-    # This is a simple approach - in production you might want a separate runs table
-
-    query = select(ProcessedEmail).order_by(ProcessedEmail.processed_at.desc())
-    all_emails = session.exec(query).all()
-
-    if not all_emails:
-        return {"runs": []}
-
-    # Group emails into runs based on time proximity (5 minutes)
     runs = []
-    current_run = None
+    for r in runs_db:
+        # Map ProcessingRun to the format expected by frontend
+        # Front end expects:
+        # run_time, first_processed, last_processed, total_emails, forwarded, blocked, errors, email_ids
 
-    for email in all_emails:
-        if (
-            current_run is None
-            or (current_run["last_processed"] - email.processed_at).total_seconds()
-            > RUN_GROUPING_WINDOW_SECONDS
-        ):
-            # Start a new run
-            if current_run:
-                runs.append(current_run)
+        # approximate "blocked" as processed - forwarded (since we don't store blocked count explicitly in run yet)
+        # Actually in scheduler.py: run.emails_processed = count of new emails
+        # run.emails_forwarded = count of forwarded
+        # blocked = processed - forwarded
 
-            current_run = {
-                "run_time": email.processed_at,
-                "first_processed": email.processed_at,
-                "last_processed": email.processed_at,
-                "total_emails": 1,
-                "forwarded": 1 if email.status == "forwarded" else 0,
-                "blocked": 1 if email.status in ["blocked", "ignored"] else 0,
-                "errors": 1 if email.status == "error" else 0,
-                "email_ids": [email.id],
+        blocked = max(0, r.emails_processed - r.emails_forwarded)
+
+        runs.append(
+            {
+                "run_time": r.started_at,
+                "first_processed": r.started_at,  # Simplified
+                "last_processed": r.completed_at or r.started_at,
+                "total_emails": r.emails_checked,  # Use checked as total seen
+                "forwarded": r.emails_forwarded,
+                "blocked": blocked,
+                "errors": 1 if r.status == "error" else 0,
+                "email_ids": [],  # Frontend doesn't use this currently
             }
-        else:
-            # Add to current run
-            current_run["total_emails"] += 1
-            current_run["first_processed"] = email.processed_at
-            if email.status == "forwarded":
-                current_run["forwarded"] += 1
-            elif email.status in ["blocked", "ignored"]:
-                current_run["blocked"] += 1
-            elif email.status == "error":
-                current_run["errors"] += 1
-            current_run["email_ids"].append(email.id)
+        )
 
-    # Add the last run
-    if current_run:
-        runs.append(current_run)
-
-    # Return limited number of runs
-    return {"runs": runs[:limit]}
+    return {"runs": runs}
 
 
 @router.get("/processing-runs", response_model=List[ProcessingRun])

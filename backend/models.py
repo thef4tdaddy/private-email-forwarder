@@ -1,7 +1,12 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
+
+
+# Helper for aware UTC default
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 class ProcessedEmail(SQLModel, table=True):
@@ -10,7 +15,7 @@ class ProcessedEmail(SQLModel, table=True):
     subject: str
     sender: str
     received_at: datetime
-    processed_at: datetime = Field(default_factory=datetime.utcnow)
+    processed_at: datetime = Field(default_factory=utc_now)
     status: str  # "forwarded", "blocked", "error"
     account_email: Optional[str] = None  # The account that received this email
     category: Optional[str] = None  # "amazon", "receipt", "spam", etc.
@@ -20,7 +25,7 @@ class ProcessedEmail(SQLModel, table=True):
 
 class Stats(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    date: datetime = Field(default_factory=datetime.utcnow)
+    date: datetime = Field(default_factory=utc_now)
     forwarded_count: int = 0
     blocked_count: int = 0
     total_amount_processed: float = 0.0
@@ -37,7 +42,7 @@ class Preference(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     item: str  # e.g. "amazon", "restaurants"
     type: str  # "Blocked Sender", "Always Forward", "Blocked Category"
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
 
 
 class ManualRule(SQLModel, table=True):
@@ -46,12 +51,12 @@ class ManualRule(SQLModel, table=True):
     subject_pattern: Optional[str] = None  # Wildcard supported
     priority: int = 10
     purpose: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
 
 
 class ProcessingRun(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    started_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime = Field(default_factory=utc_now)
     completed_at: Optional[datetime] = None
     emails_checked: int = 0  # Number of emails fetched
     emails_processed: int = 0  # Number of emails actually processed (new ones)

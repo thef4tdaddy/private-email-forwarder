@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from backend.database import engine, get_session
@@ -27,7 +27,7 @@ def process_emails():
     try:
         with Session(engine) as session:
             processing_run = ProcessingRun(
-                started_at=datetime.utcnow(),
+                started_at=datetime.now(timezone.utc),
                 check_interval_minutes=poll_interval,
                 status="running",
             )
@@ -95,7 +95,7 @@ def process_emails():
             with Session(engine) as session:
                 run = session.get(ProcessingRun, run_id)
                 if run:
-                    run.completed_at = datetime.utcnow()
+                    run.completed_at = datetime.now(timezone.utc)
                     run.emails_checked = 0
                     run.emails_processed = 0
                     run.emails_forwarded = 0
@@ -115,7 +115,7 @@ def process_emails():
                 # Update run with error
                 run = session.get(ProcessingRun, run_id)
                 if run:
-                    run.completed_at = datetime.utcnow()
+                    run.completed_at = datetime.now(timezone.utc)
                     run.emails_checked = len(emails)
                     run.emails_processed = 0
                     run.emails_forwarded = 0
@@ -168,8 +168,8 @@ def process_emails():
                     email_id=msg_id or "unknown",
                     subject=email_data.get("subject", ""),
                     sender=email_data.get("from", ""),
-                    received_at=datetime.utcnow(),  # Approximate
-                    processed_at=datetime.utcnow(),
+                    received_at=datetime.now(timezone.utc),  # Approximate
+                    processed_at=datetime.now(timezone.utc),
                     status=status,
                     account_email=account_email,
                     category=category,
@@ -182,7 +182,7 @@ def process_emails():
             # Update the processing run with final counts
             run = session.get(ProcessingRun, run_id)
             if run:
-                run.completed_at = datetime.utcnow()
+                run.completed_at = datetime.now(timezone.utc)
                 run.emails_checked = len(emails)
                 run.emails_processed = emails_processed_count
                 run.emails_forwarded = emails_forwarded_count
@@ -198,7 +198,7 @@ def process_emails():
             with Session(engine) as session:
                 run = session.get(ProcessingRun, run_id)
                 if run:
-                    run.completed_at = datetime.utcnow()
+                    run.completed_at = datetime.now(timezone.utc)
                     run.status = "error"
                     run.error_message = str(e)
                     session.add(run)

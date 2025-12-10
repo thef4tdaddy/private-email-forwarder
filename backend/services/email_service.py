@@ -33,18 +33,33 @@ class EmailService:
             mail.login(email_user, email_pass)
             mail.select("inbox")
 
-            # Fetch ALL emails, but we only process the last 'limit'
-            # Note: valid only if server returns IDs in order, which is standard
-            status, messages = mail.search(None, "ALL")
+            # Fetch emails from the last 3 days to ensure we don't miss any
+            # even if the inbox is busy.
+            from datetime import datetime, timedelta
+
+            # IMAP date format: "01-Jan-2023"
+            since_date = (datetime.now() - timedelta(days=3)).strftime("%d-%b-%Y")
+
+            # Escape just in case, though strftime is safe
+            search_criterion = f'(SINCE "{since_date}")'
+
+            print(f"   🔍 IMAP Search: {search_criterion}")
+            status, messages = mail.search(None, search_criterion)
+
             if status != "OK":
                 return []
 
             email_ids = messages[0].split()
-            print(f"   📬 Total emails found in inbox: {len(email_ids)}")
+            print(f"   📬 Recent emails found (last 3 days): {len(email_ids)}")
 
-            # Process latest first
-            email_ids = email_ids[-limit:]
-            print(f"   📥 Fetching last {len(email_ids)} emails...")
+            # If there are too many, we still limit to avoid timeout, but the date filter helps relevance
+            # Increasing limit safety net to 50
+            BATCH_LIMIT = 50
+            if len(email_ids) > BATCH_LIMIT:
+                print(f"   ⚠️ Too many emails, taking last {BATCH_LIMIT}")
+                email_ids = email_ids[-BATCH_LIMIT:]
+
+            print(f"   📥 Fetching {len(email_ids)} emails...")
 
             emails_data = []
 

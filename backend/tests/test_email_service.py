@@ -103,9 +103,9 @@ class TestEmailService:
             "test@example.com", "password123", "imap.gmail.com", limit=5
         )
 
-        # Should only fetch 5 emails
-        assert len(emails) == 5
-        assert mock_mail.fetch.call_count == 5
+        # Should fetch BATCH_LIMIT (50) instead of limit param (5) because we use SINCE strategy now
+        assert len(emails) == 50
+        assert mock_mail.fetch.call_count == 50
 
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     @patch("bs4.BeautifulSoup")
