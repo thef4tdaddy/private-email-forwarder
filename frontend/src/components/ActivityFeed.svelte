@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FileText, Clock, User, Tag, Activity as ActivityIcon } from 'lucide-svelte';
+	import { FileText, Clock, User, Tag, Activity as ActivityIcon, Ban } from 'lucide-svelte';
 
 	interface Activity {
 		id: number;
@@ -8,31 +8,10 @@
 		sender: string;
 		status: string;
 		category?: string | null;
+		account_email?: string;
 	}
 
 	export let activities: Activity[] = [];
-
-	function formatDate(dateStr: string) {
-		if (!dateStr) return '';
-		return new Date(dateStr).toLocaleString(undefined, {
-			month: 'short',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-	}
-
-	function getStatusColor(status: string) {
-		switch (status) {
-			case 'forwarded':
-				return 'bg-green-100 text-green-700 border-green-200';
-			case 'blocked':
-			case 'ignored':
-				return 'bg-red-100 text-red-700 border-red-200';
-			default:
-				return 'bg-gray-100 text-gray-700 border-gray-200';
-		}
-	}
 </script>
 
 <div class="card overflow-hidden">
