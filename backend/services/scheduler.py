@@ -3,7 +3,7 @@ from datetime import datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from backend.database import engine, get_session
-from backend.models import GlobalSettings, ProcessedEmail, ProcessingRun
+from backend.models import ProcessedEmail, ProcessingRun
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
