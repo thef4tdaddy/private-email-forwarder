@@ -50,7 +50,12 @@ def process_emails():
         email_accounts_json = os.environ.get("EMAIL_ACCOUNTS")
         if email_accounts_json:
             try:
-                accounts = json.loads(email_accounts_json)
+                try:
+                    accounts = json.loads(email_accounts_json)
+                except json.JSONDecodeError:
+                    # Try single quote fix (common mistake in .env)
+                    fixed_json = email_accounts_json.replace("'", '"')
+                    accounts = json.loads(fixed_json)
                 if isinstance(accounts, list):
                     print(f"👥 Processing {len(accounts)} accounts...")
                     for acc in accounts:

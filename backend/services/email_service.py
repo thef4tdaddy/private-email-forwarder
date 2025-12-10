@@ -1,9 +1,10 @@
 import email
 import imaplib
+import logging
 import os
 from datetime import datetime
 from email.header import decode_header
-import logging
+
 
 class EmailService:
     @staticmethod
@@ -53,8 +54,8 @@ class EmailService:
             print(f"   📬 Recent emails found (last 3 days): {len(email_ids)}")
 
             # If there are too many, we still limit to avoid timeout, but the date filter helps relevance
-            # Increasing limit safety net to 50
-            BATCH_LIMIT = 50
+            # Increasing limit safety net to 100 to handle busy catch-all inboxes
+            BATCH_LIMIT = 100
             if len(email_ids) > BATCH_LIMIT:
                 print(f"   ⚠️ Too many emails, taking last {BATCH_LIMIT}")
                 email_ids = email_ids[-BATCH_LIMIT:]
@@ -64,9 +65,14 @@ class EmailService:
             emails_data = []
 
             for e_id in email_ids:
-                res, msg_data = mail.fetch(e_id, "(RFC822)")
-                for response_part in msg_data:
+                typ, data = mail.fetch(e_id, "(BODY[])")
+                if typ != "OK":
+                    print(f"   ⚠️ Error fetching email {e_id}: Status {typ}")
+                    continue
+
+                for response_part in data:
                     if isinstance(response_part, tuple):
+                        # print(f"   ✅ Got tuple for {e_id}") # noisy
                         msg = email.message_from_bytes(response_part[1])
 
                         # Decode subject
