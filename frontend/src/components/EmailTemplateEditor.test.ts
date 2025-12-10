@@ -12,7 +12,7 @@ describe('EmailTemplateEditor Component', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		// Mock window.alert
-		global.alert = vi.fn();
+		window.alert = vi.fn();
 	});
 
 	afterEach(() => {
@@ -21,7 +21,7 @@ describe('EmailTemplateEditor Component', () => {
 
 	it('loads template on mount', async () => {
 		const mockTemplate = { template: 'Test template: {subject}\n{body}' };
-		(api.fetchJson as any).mockResolvedValueOnce(mockTemplate);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockTemplate);
 
 		render(EmailTemplateEditor);
 
@@ -31,7 +31,7 @@ describe('EmailTemplateEditor Component', () => {
 	});
 
 	it('displays loading state while fetching template', async () => {
-		(api.fetchJson as any).mockImplementation(
+		vi.mocked(api.fetchJson).mockImplementation(
 			() => new Promise((resolve) => setTimeout(resolve, 100))
 		);
 
@@ -42,7 +42,7 @@ describe('EmailTemplateEditor Component', () => {
 
 	it('displays template content in textarea', async () => {
 		const mockTemplate = { template: 'Receipt from {from}\n\n{body}' };
-		(api.fetchJson as any).mockResolvedValueOnce(mockTemplate);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockTemplate);
 
 		render(EmailTemplateEditor);
 
@@ -53,21 +53,23 @@ describe('EmailTemplateEditor Component', () => {
 	});
 
 	it('displays available variables documentation', async () => {
-		(api.fetchJson as any).mockResolvedValueOnce({ template: '' });
+		vi.mocked(api.fetchJson).mockResolvedValueOnce({ template: '' });
 
 		render(EmailTemplateEditor);
 
+		// Debugging output
+		// Check that variables are displayed (might be multiple times, e.g. in description and list)
 		await waitFor(() => {
-			expect(screen.getByText(/Available Variables/i)).toBeTruthy();
-			expect(screen.getByText(/{subject}/)).toBeTruthy();
-			expect(screen.getByText(/{from}/)).toBeTruthy();
-			expect(screen.getByText(/{body}/)).toBeTruthy();
+			expect(screen.getAllByText(/Available Variables/i)[0]).toBeTruthy();
+			expect(screen.getAllByText(/\{subject\}/).length).toBeGreaterThan(0);
+			expect(screen.getAllByText(/\{from\}/).length).toBeGreaterThan(0);
+			expect(screen.getAllByText(/\{body\}/).length).toBeGreaterThan(0);
 		});
 	});
 
 	it('save button is disabled when no changes', async () => {
 		const mockTemplate = { template: 'Original template' };
-		(api.fetchJson as any).mockResolvedValueOnce(mockTemplate);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockTemplate);
 
 		render(EmailTemplateEditor);
 
@@ -79,7 +81,7 @@ describe('EmailTemplateEditor Component', () => {
 
 	it('save button is enabled when template is modified', async () => {
 		const mockTemplate = { template: 'Original template' };
-		(api.fetchJson as any).mockResolvedValueOnce(mockTemplate);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockTemplate);
 
 		render(EmailTemplateEditor);
 
@@ -99,8 +101,8 @@ describe('EmailTemplateEditor Component', () => {
 
 	it('saves template successfully', async () => {
 		const mockTemplate = { template: 'Original template' };
-		(api.fetchJson as any).mockResolvedValueOnce(mockTemplate);
-		(api.fetchJson as any).mockResolvedValueOnce({
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockTemplate);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce({
 			template: 'New template',
 			message: 'Template updated successfully'
 		});
@@ -124,14 +126,14 @@ describe('EmailTemplateEditor Component', () => {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ template: 'New template' })
 			});
-			expect(global.alert).toHaveBeenCalledWith('Template saved successfully!');
+			expect(window.alert).toHaveBeenCalledWith('Template saved successfully!');
 		});
 	});
 
 	it('shows saving state while saving', async () => {
 		const mockTemplate = { template: 'Original template' };
-		(api.fetchJson as any).mockResolvedValueOnce(mockTemplate);
-		(api.fetchJson as any).mockImplementation(
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockTemplate);
+		vi.mocked(api.fetchJson).mockImplementation(
 			() => new Promise((resolve) => setTimeout(() => resolve({ template: 'New template' }), 100))
 		);
 
@@ -155,8 +157,8 @@ describe('EmailTemplateEditor Component', () => {
 
 	it('disables save button after successful save', async () => {
 		const mockTemplate = { template: 'Original template' };
-		(api.fetchJson as any).mockResolvedValueOnce(mockTemplate);
-		(api.fetchJson as any).mockResolvedValueOnce({
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockTemplate);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce({
 			template: 'New template',
 			message: 'Template updated successfully'
 		});
@@ -175,7 +177,7 @@ describe('EmailTemplateEditor Component', () => {
 		await fireEvent.click(saveButton);
 
 		await waitFor(() => {
-			expect(global.alert).toHaveBeenCalledWith('Template saved successfully!');
+			expect(window.alert).toHaveBeenCalledWith('Template saved successfully!');
 		});
 
 		// Save button should be disabled again after save
@@ -187,8 +189,8 @@ describe('EmailTemplateEditor Component', () => {
 
 	it('handles save error gracefully', async () => {
 		const mockTemplate = { template: 'Original template' };
-		(api.fetchJson as any).mockResolvedValueOnce(mockTemplate);
-		(api.fetchJson as any).mockRejectedValueOnce(new Error('API Error'));
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockTemplate);
+		vi.mocked(api.fetchJson).mockRejectedValueOnce(new Error('API Error'));
 
 		render(EmailTemplateEditor);
 
@@ -204,23 +206,23 @@ describe('EmailTemplateEditor Component', () => {
 		await fireEvent.click(saveButton);
 
 		await waitFor(() => {
-			expect(global.alert).toHaveBeenCalledWith('Error saving template');
+			expect(window.alert).toHaveBeenCalledWith('Error saving template');
 		});
 	});
 
 	it('handles template loading error gracefully', async () => {
-		(api.fetchJson as any).mockRejectedValueOnce(new Error('Network Error'));
+		vi.mocked(api.fetchJson).mockRejectedValueOnce(new Error('Network Error'));
 
 		render(EmailTemplateEditor);
 
 		await waitFor(() => {
-			expect(global.alert).toHaveBeenCalledWith('Error loading template');
+			expect(window.alert).toHaveBeenCalledWith('Error loading template');
 		});
 	});
 
 	it('toggles preview on button click', async () => {
 		const mockTemplate = { template: 'Subject: {subject}\nFrom: {from}\n\n{body}' };
-		(api.fetchJson as any).mockResolvedValueOnce(mockTemplate);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockTemplate);
 
 		render(EmailTemplateEditor);
 
@@ -240,7 +242,7 @@ describe('EmailTemplateEditor Component', () => {
 
 	it('hides preview on second toggle', async () => {
 		const mockTemplate = { template: 'Subject: {subject}' };
-		(api.fetchJson as any).mockResolvedValueOnce(mockTemplate);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockTemplate);
 
 		render(EmailTemplateEditor);
 
@@ -268,7 +270,7 @@ describe('EmailTemplateEditor Component', () => {
 
 	it('preview shows sample data substitution', async () => {
 		const mockTemplate = { template: 'Subject: {subject}\nFrom: {from}\n\n{body}' };
-		(api.fetchJson as any).mockResolvedValueOnce(mockTemplate);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockTemplate);
 
 		render(EmailTemplateEditor);
 

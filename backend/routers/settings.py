@@ -1,16 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
-from backend.database import get_session
-from backend.models import Preference, ManualRule, GlobalSettings
+import json
+import os
 from typing import List
-from pydantic import BaseModel
+
 from backend.constants import DEFAULT_EMAIL_TEMPLATE
+from backend.database import get_session
+from backend.models import GlobalSettings, ManualRule, Preference
+from backend.services.email_service import EmailService
+from backend.services.scheduler import process_emails
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
+from sqlmodel import Session, select
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
+
 
 @router.get("/preferences", response_model=List[Preference])
 def get_preferences(session: Session = Depends(get_session)):
     return session.exec(select(Preference)).all()
+
 
 @router.post("/preferences", response_model=Preference)
 def create_preference(pref: Preference, session: Session = Depends(get_session)):
@@ -18,6 +25,7 @@ def create_preference(pref: Preference, session: Session = Depends(get_session))
     session.commit()
     session.refresh(pref)
     return pref
+
 
 @router.delete("/preferences/{pref_id}")
 def delete_preference(pref_id: int, session: Session = Depends(get_session)):
@@ -28,9 +36,11 @@ def delete_preference(pref_id: int, session: Session = Depends(get_session)):
     session.commit()
     return {"ok": True}
 
+
 @router.get("/rules", response_model=List[ManualRule])
 def get_rules(session: Session = Depends(get_session)):
     return session.exec(select(ManualRule)).all()
+
 
 @router.post("/rules", response_model=ManualRule)
 def create_rule(rule: ManualRule, session: Session = Depends(get_session)):
@@ -38,6 +48,7 @@ def create_rule(rule: ManualRule, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(rule)
     return rule
+
 
 @router.delete("/rules/{rule_id}")
 def delete_rule(rule_id: int, session: Session = Depends(get_session)):
@@ -48,18 +59,21 @@ def delete_rule(rule_id: int, session: Session = Depends(get_session)):
     session.commit()
     return {"ok": True}
 
-from backend.services.scheduler import process_emails
-from fastapi import BackgroundTasks
 
 @router.post("/trigger-poll")
-def trigger_poll(background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
+def trigger_poll(
+    background_tasks: BackgroundTasks, session: Session = Depends(get_session)
+):
     background_tasks.add_task(process_emails)
     return {"status": "triggered", "message": "Email poll started in background"}
 
+
 # Email Template endpoints
+
 
 class EmailTemplateUpdate(BaseModel):
     template: str
+
 
 @router.get("/email-template")
 def get_email_template(session: Session = Depends(get_session)):
@@ -67,36 +81,90 @@ def get_email_template(session: Session = Depends(get_session)):
     setting = session.exec(
         select(GlobalSettings).where(GlobalSettings.key == "email_template")
     ).first()
-    
+
     if setting:
         return {"template": setting.value}
     else:
         # Return default template if not set
         return {"template": DEFAULT_EMAIL_TEMPLATE}
 
+
 @router.post("/email-template")
-def update_email_template(data: EmailTemplateUpdate, session: Session = Depends(get_session)):
+def update_email_template(
+    data: EmailTemplateUpdate, session: Session = Depends(get_session)
+):
     """Update the email template"""
     # Validate input
     if not data.template or not data.template.strip():
         raise HTTPException(status_code=400, detail="Template cannot be empty")
     if len(data.template) > 10000:
-        raise HTTPException(status_code=400, detail="Template too long (max 10,000 characters)")
-    
+        raise HTTPException(
+            status_code=400, detail="Template too long (max 10,000 characters)"
+        )
+
     setting = session.exec(
         select(GlobalSettings).where(GlobalSettings.key == "email_template")
     ).first()
-    
+
     if setting:
         setting.value = data.template
     else:
         setting = GlobalSettings(
             key="email_template",
             value=data.template,
-            description="Email template for forwarding receipts"
+            description="Email template for forwarding receipts",
         )
         session.add(setting)
-    
+
     session.commit()
     session.refresh(setting)
     return {"template": setting.value, "message": "Template updated successfully"}
+
+
+@router.post("/test-connections")
+def test_connections():
+    results = []
+
+    # 1. Try Multi-Account Config
+    email_accounts_json = os.environ.get("EMAIL_ACCOUNTS")
+
+    if email_accounts_json:
+        try:
+            accounts = json.loads(email_accounts_json)
+        except json.JSONDecodeError:
+            # Try single quote fix
+            try:
+                fixed_json = email_accounts_json.replace("'", '"')
+                accounts = json.loads(fixed_json)
+            except:
+                accounts = []
+
+        if isinstance(accounts, list):
+            for acc in accounts:
+                user = acc.get("email")
+                pwd = acc.get("password")
+                server = acc.get("imap_server", "imap.gmail.com")
+
+                if user:
+                    res = EmailService.test_connection(user, pwd, server)
+                    results.append(
+                        {
+                            "account": user,
+                            "success": res["success"],
+                            "error": res["error"],
+                        }
+                    )
+
+    # 2. Fallback to Legacy Single Account (if no accounts found/processed yet)
+    if not results:
+        user = os.environ.get("GMAIL_EMAIL")
+        pwd = os.environ.get("GMAIL_PASSWORD")
+        server = os.environ.get("IMAP_SERVER", "imap.gmail.com")
+
+        if user:
+            res = EmailService.test_connection(user, pwd, server)
+            results.append(
+                {"account": user, "success": res["success"], "error": res["error"]}
+            )
+
+    return results

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { LayoutDashboard, Settings, Shield } from 'lucide-svelte';
+	import { LayoutDashboard, Settings, History } from 'lucide-svelte';
 
 	export let currentView: string;
 	export let onViewChange: (view: string) => void;
@@ -32,6 +32,17 @@
 			>
 				<LayoutDashboard size={18} />
 				Dashboard
+			</button>
+
+			<button
+				class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 {currentView ===
+				'history'
+					? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
+					: 'text-text-secondary hover:text-primary hover:bg-gray-100'}"
+				on:click={() => onViewChange('history')}
+			>
+				<History size={18} />
+				History
 			</button>
 
 			<button
