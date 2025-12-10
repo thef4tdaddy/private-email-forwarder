@@ -154,11 +154,11 @@ def test_start_scheduler_uses_poll_interval(mock_scheduler):
     start_scheduler()
     
     # Verify scheduler.add_job was called with correct interval
-    mock_scheduler.add_job.assert_called_once()
-    call_args = mock_scheduler.add_job.call_args
+    mock_scheduler.add_job.assert_called_once_with(process_emails, "interval", minutes=45)
     
-    assert call_args[1]["minutes"] == 45  # Check interval parameter
-    assert call_args[1]["trigger"] == "interval" if "trigger" in call_args[1] else True
+    
+    
+    
     
     mock_scheduler.start.assert_called_once()
 
