@@ -136,7 +136,6 @@ def test_get_specific_processing_run(session: Session):
 def test_get_nonexistent_processing_run(session: Session):
     """Test retrieving a processing run that doesn't exist"""
     from fastapi import HTTPException
-    import pytest
     
     # Try to get a run that doesn't exist
     with pytest.raises(HTTPException) as exc_info:
