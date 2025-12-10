@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from sqlmodel import Session, create_engine, SQLModel, select
+from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
 from backend.models import ProcessingRun
 from backend.routers import history
