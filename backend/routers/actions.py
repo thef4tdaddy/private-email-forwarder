@@ -8,7 +8,7 @@ from backend.database import get_session
 from backend.models import ManualRule, ProcessedEmail
 from backend.services.command_service import CommandService
 from backend.services.forwarder import EmailForwarder
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlmodel import Session
