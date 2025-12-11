@@ -252,13 +252,22 @@ def toggle_ignored_email(
     account_email = email.account_email
 
     # Check env vars first (legacy single account)
-    if not account_email or account_email == os.environ.get("SENDER_EMAIL"):
+    if not account_email or (
+        os.environ.get("SENDER_EMAIL")
+        and account_email.lower() == os.environ.get("SENDER_EMAIL").lower()
+    ):
         email_user = os.environ.get("SENDER_EMAIL")
         email_pass = os.environ.get("SENDER_PASSWORD")
-    elif account_email == os.environ.get("GMAIL_EMAIL"):
+    elif (
+        os.environ.get("GMAIL_EMAIL")
+        and account_email.lower() == os.environ.get("GMAIL_EMAIL").lower()
+    ):
         email_user = os.environ.get("GMAIL_EMAIL")
         email_pass = os.environ.get("GMAIL_PASSWORD")
-    elif account_email == os.environ.get("ICLOUD_EMAIL"):
+    elif (
+        os.environ.get("ICLOUD_EMAIL")
+        and account_email.lower() == os.environ.get("ICLOUD_EMAIL").lower()
+    ):
         email_user = os.environ.get("ICLOUD_EMAIL")
         email_pass = os.environ.get("ICLOUD_PASSWORD")
         imap_server = "imap.mail.me.com"
@@ -270,7 +279,8 @@ def toggle_ignored_email(
             if accounts_json:
                 accounts = json.loads(accounts_json)
                 for acc in accounts:
-                    if acc.get("email") == account_email:
+                    acc_email = acc.get("email")
+                    if acc_email and acc_email.lower() == account_email.lower():
                         email_user = acc.get("email")
                         email_pass = acc.get("password")
                         imap_server = acc.get("imap_server", "imap.gmail.com")
@@ -280,15 +290,55 @@ def toggle_ignored_email(
 
     # Default to primary if we can't find specific ones (last resort/fallback)
     if not email_user:
+        print(f"⚠️ Account not found for {account_email}, falling back to SENDER_EMAIL")
         email_user = os.environ.get("SENDER_EMAIL")
         email_pass = os.environ.get("SENDER_PASSWORD")
+
+    first_attempt_user = email_user
 
     # 2. Fetch content
     original_content = None
     if email_user and email_pass:
+        print(
+            f"DEBUG: Fetching email {email.email_id} for {email_user} on {imap_server}"
+        )
         original_content = EmailService.fetch_email_by_id(
             email_user, email_pass, email.email_id, imap_server
         )
+
+    # 2b. Universal Fallback: If not found, try all other accounts
+    if not original_content:
+        print(f"DEBUG: Email not found in {first_attempt_user}, trying all accounts...")
+        try:
+            accounts_json = os.environ.get("EMAIL_ACCOUNTS")
+            if accounts_json:
+                accounts = json.loads(accounts_json)
+                for acc in accounts:
+                    fallback_user = acc.get("email")
+                    fallback_pass = acc.get("password")
+                    fallback_server = acc.get("imap_server", "imap.gmail.com")
+
+                    # Skip if already tried
+                    if fallback_user == first_attempt_user:
+                        continue
+
+                    if fallback_user and fallback_pass:
+                        print(
+                            f"DEBUG: Fallback attempt for {email.email_id} on {fallback_user}"
+                        )
+                        original_content = EmailService.fetch_email_by_id(
+                            fallback_user,
+                            fallback_pass,
+                            email.email_id,
+                            fallback_server,
+                        )
+                        if original_content:
+                            print(
+                                f"DEBUG: Found email in fallback account: {fallback_user}"
+                            )
+                            break
+        except Exception as e:
+            print(f"DEBUG: Fallback iteration error: {e}")
 
     # 3. Construct body
     if original_content:
