@@ -51,6 +51,11 @@
 			previewText = template
 				.replace(/{subject}/g, 'Your Amazon Order Confirmation')
 				.replace(/{from}/g, 'no-reply@amazon.com')
+				.replace(/{simple_name}/g, 'Amazon')
+				.replace(/{link_stop}/g, '#stop')
+				.replace(/{link_more}/g, '#more')
+				.replace(/{link_settings}/g, '#settings')
+				.replace(/{action_type_text}/g, 'Clicking an action opens a web confirmation.')
 				.replace(
 					/{body}/g,
 					'Thank you for your order!\n\nOrder #123-4567890-1234567\nTotal: $49.99\n\nYour order will be delivered on January 15, 2024.'
@@ -66,11 +71,7 @@
 	<div class="p-6">
 		<div class="mb-6">
 			<p class="text-sm text-text-secondary">
-				Customize how forwarded emails appear. Use variables like <code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600"
-					>{'{subject}'}</code
-				>,
-				<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600">{'{from}'}</code>, and
-				<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600">{'{body}'}</code> to insert email content.
+				Customize how forwarded emails appear. You can write full HTML here.
 			</p>
 		</div>
 
@@ -81,13 +82,13 @@
 				<!-- Template Editor -->
 				<div>
 					<label for="template" class="block text-sm font-medium text-text-secondary mb-2">
-						Template Content
+						Template Content (HTML supported)
 					</label>
 					<textarea
 						id="template"
 						bind:value={template}
-						rows="10"
-						class="input-field font-mono text-sm"
+						rows="15"
+						class="input-field font-mono text-xs"
 						placeholder="Enter your email template..."
 					></textarea>
 				</div>
@@ -97,18 +98,48 @@
 					<p class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
 						Available Variables
 					</p>
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
 						<div>
-							<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600">{'{subject}'}</code>
-							<span class="text-text-secondary ml-1">- Email subject</span>
+							<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600"
+								>{'{subject}'}</code
+							>
+							<span class="text-text-secondary text-xs block">Email subject</span>
 						</div>
 						<div>
-							<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600">{'{from}'}</code>
-							<span class="text-text-secondary ml-1">- Sender email</span>
+							<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600"
+								>{'{from}'}</code
+							>
+							<span class="text-text-secondary text-xs block">Sender email</span>
 						</div>
 						<div>
-							<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600">{'{body}'}</code>
-							<span class="text-text-secondary ml-1">- Email body</span>
+							<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600"
+								>{'{body}'}</code
+							>
+							<span class="text-text-secondary text-xs block">Email body content</span>
+						</div>
+						<div>
+							<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600"
+								>{'{simple_name}'}</code
+							>
+							<span class="text-text-secondary text-xs block">E.g. "Amazon"</span>
+						</div>
+						<div>
+							<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600"
+								>{'{link_stop}'}</code
+							>
+							<span class="text-text-secondary text-xs block">Block link (URL)</span>
+						</div>
+						<div>
+							<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600"
+								>{'{link_more}'}</code
+							>
+							<span class="text-text-secondary text-xs block">Forward link (URL)</span>
+						</div>
+						<div>
+							<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600"
+								>{'{link_settings}'}</code
+							>
+							<span class="text-text-secondary text-xs block">Settings link (URL)</span>
 						</div>
 					</div>
 				</div>
@@ -125,11 +156,7 @@
 
 				<!-- Action Buttons -->
 				<div class="flex gap-3 pt-2">
-					<button
-						on:click={saveTemplate}
-						disabled={saving || !hasChanges}
-						class="btn btn-primary"
-					>
+					<button on:click={saveTemplate} disabled={saving || !hasChanges} class="btn btn-primary">
 						<Save size={16} />
 						{saving ? 'Saving...' : 'Save Template'}
 					</button>

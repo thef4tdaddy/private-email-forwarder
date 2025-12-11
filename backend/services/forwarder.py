@@ -63,35 +63,24 @@ class EmailForwarder:
         msg["To"] = target_email
         msg["Subject"] = f"Fwd: {original_email_data.get('subject', 'No Subject')}"
 
-        # Get template from database
-        template = DEFAULT_EMAIL_TEMPLATE
-        try:
-            with Session(engine) as session:
-                setting = session.exec(
-                    select(GlobalSettings).where(GlobalSettings.key == "email_template")
-                ).first()
-                if setting:
-                    template = setting.value
-        except Exception:
-            pass  # Use default template if DB access fails
-
         # Helper to extract a simple name for commands (e.g. "Amazon" from "Amazon.com")
         from_header = original_email_data.get("from", "")
-        simple_name = "sender"
+        simple_name = "Sender"
         if "@" in from_header:
             try:
                 # Extract domain part "amazon.com"
                 domain = from_header.split("@")[1].split(">")[0].strip()
                 # Extract main name "amazon"
-                simple_name = domain.split(".")[0]
+                simple_name = domain.split(".")[0].capitalize()
             except:
                 pass
 
-        # Construct Action Links
-        # Strategies:
-        # 1. HTTP Links (preferred, requires APP_URL)
-        # 2. Mailto Links (fallback)
+        # Prepare content
+        body_content = original_email_data.get("body", "")
+        # Basic HTML newline replacement for safety if plain text is passed
+        body_content_html = body_content.replace(chr(10), "<br>")
 
+        # Construct Action Links
         app_url = os.environ.get("APP_URL")
         # Strip trailing slash if present
         if app_url and app_url.endswith("/"):
@@ -128,58 +117,63 @@ class EmailForwarder:
                 params = {"subject": subject_re, "body": body}
                 return f"mailto:{sender_email}?{urllib.parse.urlencode(params).replace('+', '%20')}"
 
-        link_stop = make_link("STOP", simple_name)
-        link_more = make_link("MORE", simple_name)
-        link_settings = make_link("SETTINGS", "")  # No arg for settings
+        link_stop = make_link("STOP", simple_name.lower())  # Args usually lowercase
+        link_more = make_link("MORE", simple_name.lower())
+        link_settings = make_link("SETTINGS", "")
 
-        # Create HTML Header
-        # We need to detect if using mailto or http to change the footer text
         action_type_text = (
             "Clicking an action opens a web confirmation."
             if app_url
             else "Clicking an action opens your email app. Just hit Send!"
         )
 
-        header_html = f"""
-        <div style="font-family: sans-serif; background-color: #f4f4f5; padding: 16px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e4e4e7;">
-            <div style="font-weight: bold; color: #18181b; margin-bottom: 12px; font-size: 16px;">
-                🛡️ SentinelAction: {simple_name.capitalize()}
-            </div>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <a href="{link_stop}" style="text-decoration: none; background-color: #ef4444; color: white; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 500;">
-                    🚫 Block {simple_name.capitalize()}
-                </a>
-                <a href="{link_more}" style="text-decoration: none; background-color: #22c55e; color: white; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 500;">
-                    ✅ Always Forward
-                </a>
-                <a href="{link_settings}" style="text-decoration: none; background-color: #71717a; color: white; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 500;">
-                    ⚙️ Settings
-                </a>
-            </div>
-            <div style="font-size: 11px; color: #71717a; margin-top: 12px;">
-                {action_type_text}
-            </div>
-        </div>
-        <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-        """
+        # Get template from database or default
+        template = DEFAULT_EMAIL_TEMPLATE
+        try:
+            with Session(engine) as session:
+                setting = session.exec(
+                    select(GlobalSettings).where(GlobalSettings.key == "email_template")
+                ).first()
+                if setting and setting.value and len(setting.value.strip()) > 0:
+                    template = setting.value
+        except Exception:
+            pass  # Use default template if DB access fails
 
-        # Create body by substituting variables in template
-        # We prefer HTML now.
-        body_content = original_email_data.get("body", "")
-
-        # If the original body is just plain text, wrap it. If it's HTML, prepend our header.
-        # Ideally we want to send a proper HTML email.
-
-        final_html = f"""
-        <html>
-            <body>
-                {header_html}
-                <div style="font-family: sans-serif;">
-                    {body_content.replace(chr(10), "<br>")}
-                </div>
-            </body>
-        </html>
-        """
+        # Render Template
+        # We use safe substitution or try/except to allow for missing keys in custom templates
+        final_html = ""
+        try:
+            # First try standard formatting
+            final_html = template.format(
+                simple_name=simple_name,
+                link_stop=link_stop,
+                link_more=link_more,
+                link_settings=link_settings,
+                action_type_text=action_type_text,
+                body=body_content_html,
+                subject=original_email_data.get("subject", ""),
+                **{
+                    "from": from_header
+                },  # 'from' is a keyword in python, so we pass it as dict
+            )
+        except (KeyError, ValueError):
+            # Fallback for old templates or malformed ones: try to at least put the body in
+            # Or revert to DEFAULT if custom failed
+            print("⚠️ Custom template failed rendering, falling back to default.")
+            try:
+                final_html = DEFAULT_EMAIL_TEMPLATE.format(
+                    simple_name=simple_name,
+                    link_stop=link_stop,
+                    link_more=link_more,
+                    link_settings=link_settings,
+                    action_type_text=action_type_text,
+                    body=body_content_html,
+                    subject=original_email_data.get("subject", ""),
+                    **{"from": from_header},
+                )
+            except Exception as e:
+                # Absolute fallback
+                final_html = f"<html><body>{body_content_html}</body></html>"
 
         # Attach HTML part
         msg.attach(MIMEText(final_html, "html"))
