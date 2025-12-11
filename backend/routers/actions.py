@@ -90,26 +90,74 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
         html_list = ""
 
         if allowed:
-            html_list += "<h3 style='color: #22c55e;'>✅ Always Forwarding</h3><ul style='list-style: none; padding: 0;'>"
+            html_list += """
+            <div style="margin-bottom: 24px;">
+                <h3 style="color: #15803d; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                    ✅ Always Forwarding
+                </h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            """
             for p in allowed:
-                html_list += f"<li style='background: #dcfce7; color: #15803d; padding: 8px; margin: 4px 0; border-radius: 4px;'>{p.item}</li>"
-            html_list += "</ul>"
+                html_list += f"""
+                <span style="background: #dcfce7; color: #166534; padding: 6px 12px; border-radius: 9999px; font-size: 13px; font-weight: 500; border: 1px solid #bbf7d0;">
+                    {p.item}
+                </span>
+                """
+            html_list += "</div></div>"
 
         if blocked:
-            html_list += "<h3 style='color: #ef4444;'>🚫 Blocked</h3><ul style='list-style: none; padding: 0;'>"
+            html_list += """
+            <div style="margin-bottom: 24px;">
+                <h3 style="color: #b91c1c; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                    🚫 Blocked
+                </h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            """
             for p in blocked:
-                html_list += f"<li style='background: #fee2e2; color: #b91c1c; padding: 8px; margin: 4px 0; border-radius: 4px;'>{p.item}</li>"
-            html_list += "</ul>"
+                html_list += f"""
+                <span style="background: #fee2e2; color: #991b1b; padding: 6px 12px; border-radius: 9999px; font-size: 13px; font-weight: 500; border: 1px solid #fecaca;">
+                    {p.item}
+                </span>
+                """
+            html_list += "</div></div>"
 
         if not blocked and not allowed:
-            html_list = "<p>No active preferences found.</p>"
+            html_list = """
+            <div style="text-align: center; padding: 40px 20px; color: #71717a;">
+                <p>No active preferences found yet.</p>
+                <p style="font-size: 13px;">Use the action buttons in forwarded emails to build your list.</p>
+            </div>
+            """
 
         return f"""
+         <!DOCTYPE html>
          <html>
-            <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h1 style="text-align: center; color: #333;">⚙️ Current Settings</h1>
-                <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
-                    {html_list}
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 20px; color: #18181b; }}
+                    .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden; }}
+                    .header {{ background: #fafafa; padding: 20px; border-bottom: 1px solid #e4e4e7; text-align: center; }}
+                    .logo {{ font-size: 24px; margin-bottom: 8px; display: block; }}
+                    .title {{ font-weight: 600; font-size: 18px; margin: 0; color: #18181b; }}
+                    .content {{ padding: 24px; }}
+                    .footer {{ padding: 16px; text-align: center; background: #fafafa; border-top: 1px solid #e4e4e7; }}
+                    .btn {{ display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 500; font-size: 14px; transition: background 0.2s; }}
+                    .btn:hover {{ background: #1d4ed8; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <span class="logo">⚙️</span>
+                        <h1 class="title">Current Settings</h1>
+                    </div>
+                    <div class="content">
+                        {html_list}
+                    </div>
+                    <div class="footer">
+                        <a href="/history" class="btn">Go to Dashboard</a>
+                    </div>
                 </div>
             </body>
          </html>
