@@ -21,6 +21,10 @@
 	let modalElement: HTMLDivElement | undefined = $state();
 	let previouslyFocusedElement: HTMLElement | null = null;
 
+	// Selector for focusable elements
+	const FOCUSABLE_SELECTOR =
+		'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 	function handleBackdropClick(e: MouseEvent) {
 		if (e.target === e.currentTarget) {
 			onClose();
@@ -34,9 +38,8 @@
 
 		// Handle Tab key for focus trapping
 		if (e.key === 'Tab' && isOpen && modalElement) {
-			const focusableElements = modalElement.querySelectorAll<HTMLElement>(
-				'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-			);
+			const focusableElements =
+				modalElement.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
 			const focusableArray = Array.from(focusableElements);
 
 			if (focusableArray.length === 0) return;
@@ -68,9 +71,8 @@
 			// Focus the modal after a brief delay to ensure it's rendered
 			setTimeout(() => {
 				if (modalElement) {
-					const focusableElements = modalElement.querySelectorAll<HTMLElement>(
-						'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-					);
+					const focusableElements =
+						modalElement.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
 					if (focusableElements.length > 0) {
 						focusableElements[0].focus();
 					} else {
