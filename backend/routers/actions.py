@@ -199,22 +199,26 @@ A manual rule has been created to forward future emails from this sender.""",
         "account_email": email.account_email,
     }
 
-    # Try to forward the email
-    success = EmailForwarder.forward_email(email_data, target_email)
+    try:
+        # Try to forward the email
+        success = EmailForwarder.forward_email(email_data, target_email)
 
-    if not success:
+        if not success:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="Failed to forward email")
+
+        # Update email status to forwarded
+        email.status = "forwarded"
+        email.reason = "Manually toggled from ignored"
+
+        # Commit changes
+        session.add(email)
+        session.commit()
+        session.refresh(email)
+        session.refresh(manual_rule)
+    except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=500, detail="Failed to forward email")
-
-    # Update email status to forwarded
-    email.status = "forwarded"
-    email.reason = "Manually toggled from ignored"
-
-    # Commit changes
-    session.add(email)
-    session.commit()
-    session.refresh(email)
-    session.refresh(manual_rule)
+        raise HTTPException(status_code=500, detail=f"An error occurred while forwarding the email and creating the rule: {str(e)}")
 
     return {
         "success": True,
