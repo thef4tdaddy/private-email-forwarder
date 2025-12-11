@@ -1,94 +1,137 @@
-// README.md
-# Receipt Forwarder with Notion Integration
+# SentinelShare
 
-Automatically forwards receipts from your Gmail and iCloud accounts to your wife, with smart filtering, preference learning, and complete Notion dashboard integration.
+# SentinelShare
 
-## 🎯 Features
+**SentinelShare** is an automated financial guardian for your household. It quietly monitors your email inboxes, intelligently detects receipts (from Amazon, recurring subscriptions, etc.), and forwards them to your partner or accountant.
 
-- 🔍 **Automatic receipt detection** from Gmail and iCloud
-- 📧 **Smart forwarding** with beautiful email templates
-- 🚫 **Intelligent blocking** based on wife's replies
-- 📊 **Complete Notion integration** for monitoring and control
-- 📱 **Mobile management** via Notion app
-- 🎛️ **Manual overrides** directly in Notion databases
-- 🎯 **Manual catch-all system** with custom rules to ensure nothing gets missed
-- 💰 **Spending analysis** with amount extraction
-- 🔄 **Real-time sync** between email replies and Notion
+## 💡 The Problem
 
-## 🚀 Quick Start
+Keeping family finances in sync is hard. One person buys something on Amazon, but the receipt gets buried in their personal inbox. The other person (or the accountant) has to chase them down for "that $49.99 charge".
 
-1. **Follow SETUP.md** for complete installation guide
-2. **Create 5 Notion databases** (Activity, Preferences, Replies, Stats, Manual Forward)
-3. **Deploy to Vercel** with environment variables
-4. **Test with sample receipt** email
+## ✅ The Solution
 
-## 🎛️ Control Methods
+SentinelShare solves this by:
 
-### Email Commands (for your wife)
-Reply to any forwarded email with:
-- `STOP amazon` - Block Amazon receipts
-- `STOP restaurants` - Block restaurant category  
-- `MORE starbucks` - Always forward Starbucks
-- `SETTINGS` - View current preferences
+1.  **Watching**: Connecting securely to your Gmail/iCloud.
+2.  **Filtering**: Ignoring spam, shipping updates, and promos.
+3.  **Forwarding**: Sending _only_ the actual receipts to a designated email.
+4.  **Managing**: Providing a unified dashboard to track what's been shared.
 
-### Notion Dashboard
-- **Activity Log** - Every email processed with details
-- **Preferences** - Add/remove blocks directly
-- **Wife's Replies** - Command history and actions taken
-- **System Stats** - Performance and health monitoring
-- **Manual Forward Rules** - Custom forwarding rules with pattern matching
+It turns a manual chore into a "set it and forget it" background process.
 
-### Manual Overrides
-Add entries directly to Notion Preferences database:
-- **Blocked Sender**: Item="amazon", Type="Blocked Sender"
-- **Always Forward**: Item="starbucks", Type="Always Forward"
-- **Blocked Category**: Item="restaurants", Type="Blocked Category"
+## 🚀 Features
 
-### Manual Forward Rules
-Create custom catch-all rules in the Manual Forward database:
-- **Email Pattern**: "*@amazon.com" (wildcards supported)  
-- **Subject Pattern**: "*order*" or "receipt"
-- **Priority**: Lower numbers = higher priority
-- **Purpose**: Catch emails that might be missed by regular receipt detection
+- **Smart Receipt Detection**: Automatically identifies receipts from retailers like Amazon, Starbucks, Apple, and more, separating them from shipping notifications and promotional spam.
+- **Multi-Account Support**: Connects to multiple IMAP accounts (Gmail, iCloud) to monitor for receipts.
+- **Intelligent Forwarding**: Forwards detected receipts to a target email address with a rich, summary header.
+- **Smart Actions**:
+  - **Block**: Stop forwarding specific senders or categories with one click.
+  - **Always Forward**: Whitelist senders to ensure they are never missed.
+  - **Settings**: Manage preferences directly from the forwarded email or the dashboard.
+- **Modern Web Dashboard**:
+  - **Activity Feed**: Real-time log of processed emails.
+  - **History**: Searchable history of all actions.
+  - **Stats**: Visual breakdown of forwarded vs. blocked emails and spending over time.
+  - **Settings**: Configure manual rules, manage blocking lists, and edit email templates.
+- **Rich Email Templates**: Customizable, beautiful HTML templates for forwarded emails.
 
-## 📊 Analytics
+## 🛠️ Technology Stack
 
-Track spending patterns with:
-- Amount extraction from receipts
-- Category-based analysis
-- Monthly/weekly summaries
-- Blocked vs forwarded ratios
+- **Backend**: Python (FastAPI), SQLModel (SQLite), APScheduler, imaplib.
+- **Frontend**: Svelte 5, Tailwind CSS, Vite, Lucide Icons.
+- **Deployment**: Ready for Heroku or Docker-based environments.
 
-## 🔧 Customization
+## 📦 Installation & Setup
 
-**Add your stores** in `lib/receipt-detector.js`:
-```javascript
-if (from.includes('your-local-store')) return 'Local Shopping'
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- IMAP-enabled email accounts (Gmail App Passwords recommended)
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/f4tdaddy/SentinelShare.git
+cd SentinelShare
 ```
 
-**Adjust schedule** in `vercel.json`:
-```json
-"schedule": "*/30 * * * *"  // Every 30 minutes
+### 2. Backend Setup
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+cp .env.example .env
+# Edit .env with your credentials (see Configuration below)
 ```
 
-## 📱 Mobile Access
+### 3. Frontend Setup
 
-- Install Notion mobile app
-- Pin your Receipt Dashboard page  
-- Get notifications for new activity
-- Add blocks on the go
+```bash
+cd frontend
+npm install
+```
 
-## 🛡️ Privacy & Security
+### 4. Configuration (.env)
 
-- Uses app passwords, not main credentials
-- All data stored in your Notion workspace
-- No third-party data sharing
-- Full audit trail of all actions
+Create a `.env` file in the root directory with the following variables:
 
-## 📝 License
+```ini
+# App
+SECRET_KEY=your_secret_key_here
+APP_URL=http://localhost:5173  # Or your production URL
 
-MIT License - Use freely for personal projects
+# Primary Email (Source)
+GMAIL_EMAIL=your_email@gmail.com
+GMAIL_PASSWORD=your_app_password
+
+# Target Email (Recipient)
+WIFE_EMAIL=recipient@example.com
+SENDER_EMAIL=your_email@gmail.com  # Account to send FROM
+SENDER_PASSWORD=your_app_password
+
+# Optional: Additional Accounts (JSON string)
+EMAIL_ACCOUNTS='[{"email": "other@icloud.com", "password": "...", "imap_server": "imap.mail.me.com"}]'
+```
+
+### 5. Running the Application
+
+**Backend:**
+
+```bash
+# From root directory
+python3 run.py
+# Or: uvicorn backend.main:app --reload
+```
+
+**Frontend:**
+
+```bash
+cd frontend
+npm run dev
+```
+
+Visit `http://localhost:5173` (or your configured port) to access the dashboard.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## 📄 License
+
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+
+- ✅ **Free for Personal Use**: You can self-host, modify, and use this for your personal needs (e.g., managing your own receipts).
+- ❌ **No Commercial Use**: You cannot sell this software, offer it as a service (SaaS), or use it for any commercial benefit without a separate license.
+
+See the [LICENSE](LICENSE) file for details.
 
 ---
 
-**Need help?** Check SETUP.md for detailed instructions or create an issue.
+Copyright (c) 2025 f4tdaddy
