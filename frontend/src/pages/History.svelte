@@ -10,7 +10,8 @@
 		ChevronLeft,
 		ChevronRight,
 		History as HistoryIcon,
-		RefreshCw
+		RefreshCw,
+		X
 	} from 'lucide-svelte';
 
 	interface Email {
@@ -64,6 +65,8 @@
 
 	let loading = true;
 	let activeTab: 'emails' | 'runs' = 'emails';
+	let showModal = false;
+	let selectedEmail: Email | null = null;
 
 	async function loadHistory() {
 		loading = true;
@@ -153,19 +156,28 @@
 		}
 	}
 
-	async function toggleIgnored(email: Email) {
-		if (!confirm(`Forward this email and create a rule for "${email.sender}"?`)) {
-			return;
-		}
+	function openModal(email: Email) {
+		selectedEmail = email;
+		showModal = true;
+	}
+
+	function closeModal() {
+		showModal = false;
+		selectedEmail = null;
+	}
+
+	async function confirmToggle() {
+		if (!selectedEmail) return;
 
 		try {
 			const result = await fetchJson('/actions/toggle-ignored', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ email_id: email.id })
+				body: JSON.stringify({ email_id: selectedEmail.id })
 			});
 
 			alert(result.message || 'Email forwarded and rule created successfully!');
+			closeModal();
 			// Reload history to see the updated status
 			await loadHistory();
 		} catch (e) {
@@ -347,17 +359,12 @@
 						>
 							Processed
 						</th>
-						<th
-							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50 text-center"
-						>
-							Actions
-						</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#if loading}
 						<tr>
-							<td colspan="7" class="py-12 text-center text-text-secondary">
+							<td colspan="6" class="py-12 text-center text-text-secondary">
 								<div class="flex items-center justify-center gap-2">
 									<Clock size={20} class="animate-spin" />
 									Loading...
@@ -366,7 +373,7 @@
 						</tr>
 					{:else if emails.length === 0}
 						<tr>
-							<td colspan="7" class="py-12 text-center text-text-secondary">
+							<td colspan="6" class="py-12 text-center text-text-secondary">
 								<div class="flex flex-col items-center justify-center gap-3">
 									<div class="bg-gray-100 p-3 rounded-full">
 										<Mail size={24} class="text-gray-400" />
@@ -381,14 +388,27 @@
 								class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors"
 							>
 								<td class="py-3 px-4">
-									<span
-										class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(
-											email.status
-										)}"
-									>
-										<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
-										{email.status}
-									</span>
+									{#if email.status === 'ignored'}
+										<button
+											on:click={() => openModal(email)}
+											class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(
+												email.status
+											)} cursor-pointer hover:opacity-80 transition-opacity"
+											title="Click to forward and create rule"
+										>
+											<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
+											{email.status}
+										</button>
+									{:else}
+										<span
+											class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(
+												email.status
+											)}"
+										>
+											<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
+											{email.status}
+										</span>
+									{/if}
 								</td>
 								<td class="py-3 px-4 font-medium text-text-main">
 									<div class="truncate max-w-[300px]" title={email.subject}>
@@ -414,20 +434,6 @@
 								</td>
 								<td class="py-3 px-4 text-text-secondary text-sm whitespace-nowrap">
 									{formatDate(email.processed_at)}
-								</td>
-								<td class="py-3 px-4 text-center">
-									{#if email.status === 'ignored'}
-										<button
-											on:click={() => toggleIgnored(email)}
-											class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-primary hover:bg-primary-dark rounded-lg transition-colors"
-											title="Forward this email and create a rule"
-										>
-											<RefreshCw size={14} />
-											Forward & Rule
-										</button>
-									{:else}
-										<span class="text-gray-400 text-xs">—</span>
-									{/if}
 								</td>
 							</tr>
 						{/each}
@@ -526,6 +532,65 @@
 					</div>
 				{/each}
 			{/if}
+		</div>
+	</div>
+{/if}
+
+<!-- Modal for confirming toggle action -->
+{#if showModal && selectedEmail}
+	<div
+		class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+		on:click={closeModal}
+	>
+		<div
+			class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
+			on:click={(e) => e.stopPropagation()}
+		>
+			<!-- Modal Header -->
+			<div class="flex items-center justify-between mb-4">
+				<h3 class="text-lg font-bold text-text-main">Forward Ignored Email</h3>
+				<button
+					on:click={closeModal}
+					class="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+					title="Close"
+				>
+					<X size={20} class="text-text-secondary" />
+				</button>
+			</div>
+
+			<!-- Modal Content -->
+			<div class="mb-6">
+				<p class="text-text-secondary mb-4">
+					This email was marked as ignored. Do you want to forward it and create a rule to
+					automatically forward similar emails in the future?
+				</p>
+
+				<div class="bg-gray-50 rounded-lg p-4 space-y-2">
+					<div>
+						<span class="text-xs font-semibold text-text-secondary uppercase">Subject:</span>
+						<p class="text-sm text-text-main break-words">{selectedEmail.subject}</p>
+					</div>
+					<div>
+						<span class="text-xs font-semibold text-text-secondary uppercase">Sender:</span>
+						<p class="text-sm text-text-main break-words">{selectedEmail.sender}</p>
+					</div>
+					{#if selectedEmail.reason}
+						<div>
+							<span class="text-xs font-semibold text-text-secondary uppercase">Reason:</span>
+							<p class="text-sm text-text-main">{selectedEmail.reason}</p>
+						</div>
+					{/if}
+				</div>
+			</div>
+
+			<!-- Modal Actions -->
+			<div class="flex gap-3 justify-end">
+				<button on:click={closeModal} class="btn btn-secondary"> Cancel </button>
+				<button on:click={confirmToggle} class="btn btn-primary">
+					<RefreshCw size={16} />
+					Forward & Create Rule
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}
