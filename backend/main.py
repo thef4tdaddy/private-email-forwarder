@@ -20,12 +20,47 @@ async def lifespan(app: FastAPI):
 
 import os
 
-from backend.routers import actions, dashboard, history, settings
-from fastapi.responses import FileResponse
+from backend.routers import actions, auth, dashboard, history, settings
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.requests import Request
 
 app = FastAPI(title="Receipt Forwarder API", lifespan=lifespan)
 
+# Session Middleware (Required for Auth)
+app.add_middleware(
+    SessionMiddleware, secret_key=os.environ.get("SECRET_KEY", "CHANGEME_DEV_KEY")
+)
+
+
+# Custom Auth Middleware
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    path = request.url.path
+
+    # Allow public endpoints
+    if (
+        path.startswith("/api/auth")
+        or path in ["/api/health", "/health"]
+        or path.startswith("/assets")
+        or path == "/"
+        or not path.startswith("/api")  # Serve frontend assets/SPA routes freely
+    ):
+        return await call_next(request)
+
+    # Check Authentication for protected API routes
+    if not request.session.get("authenticated"):
+        # If DASHBOARD_PASSWORD is not set, allow access (Backward compatibility/Dev mode)
+        if not os.environ.get("DASHBOARD_PASSWORD"):
+            return await call_next(request)
+
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+
+    return await call_next(request)
+
+
+app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(settings.router)
 app.include_router(history.router)
