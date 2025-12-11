@@ -146,11 +146,13 @@
 
 				<!-- Preview Section -->
 				{#if showPreview}
-					<div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-						<p class="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-2">
+					<div class="bg-gray-100 border border-gray-200 rounded-lg p-4">
+						<p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
 							Preview (with sample data)
 						</p>
-						<pre class="text-sm text-text-main whitespace-pre-wrap font-sans">{previewText}</pre>
+						<div class="bg-white p-4 rounded shadow-sm overflow-hidden prose max-w-none">
+							{@html previewText}
+						</div>
 					</div>
 				{/if}
 
