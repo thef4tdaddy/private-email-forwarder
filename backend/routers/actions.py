@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import html
 import os
 from datetime import datetime, timezone
 from email.utils import parseaddr
@@ -34,6 +35,9 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
     if not verify_signature(cmd, arg, ts, sig):
         raise HTTPException(status_code=403, detail="Invalid signature")
 
+    # Escape user input for safe HTML rendering
+    safe_arg = html.escape(arg)
+
     # Check timestamp expiration (e.g. 7 days link validity)
     try:
         link_ts = float(ts)
@@ -60,17 +64,17 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
         # But for 'STOP amazon', it handles as blocked sender.
         # Ideally we differentiate STOP_SENDER vs STOP_CATEGORY in the link generation.
         success = True
-        message = f"🚫 Successfully Blocked: {arg}"
+        message = f"🚫 Successfully Blocked: {safe_arg}"
 
     elif cmd.upper() == "MORE":
         CommandService._add_preference(arg, "Always Forward")
         success = True
-        message = f"✅ Always Forwarding: {arg}"
+        message = f"✅ Always Forwarding: {safe_arg}"
 
     elif cmd.upper() == "BLOCK_CATEGORY":
         CommandService._add_preference(arg, "Blocked Category")
         success = True
-        message = f"🚫 Blocked Category: {arg}"
+        message = f"🚫 Blocked Category: {safe_arg}"
 
     elif cmd.upper() == "SETTINGS":
         from backend.database import engine
@@ -153,12 +157,12 @@ def toggle_ignored_email(
     sender = email.sender
     # parseaddr returns (realname, email_address)
     _, email_pattern = parseaddr(sender)
-    
+
     if not email_pattern or "@" not in email_pattern:
         raise HTTPException(
             status_code=400, detail="Could not extract email pattern from sender"
         )
-    
+
     # Normalize to lowercase for consistency
     email_pattern = email_pattern.lower().strip()
 
@@ -168,7 +172,9 @@ def toggle_ignored_email(
     ).first()
     if not existing_rule:
         # Truncate subject intelligently with ellipsis
-        truncated_subject = email.subject[:47] + "..." if len(email.subject) > 50 else email.subject
+        truncated_subject = (
+            email.subject[:47] + "..." if len(email.subject) > 50 else email.subject
+        )
         manual_rule = ManualRule(
             email_pattern=email_pattern,
             subject_pattern=None,
@@ -220,7 +226,10 @@ A manual rule has been created to forward future emails from this sender.""",
         session.refresh(manual_rule)
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=500, detail=f"An error occurred while forwarding the email and creating the rule: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while forwarding the email and creating the rule: {str(e)}",
+        )
 
     return {
         "success": True,
