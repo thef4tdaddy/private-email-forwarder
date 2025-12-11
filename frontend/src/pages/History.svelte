@@ -9,7 +9,9 @@
 		AlertCircle,
 		ChevronLeft,
 		ChevronRight,
-		History as HistoryIcon
+		History as HistoryIcon,
+		RefreshCw,
+		X
 	} from 'lucide-svelte';
 
 	interface Email {
@@ -63,6 +65,11 @@
 
 	let loading = true;
 	let activeTab: 'emails' | 'runs' = 'emails';
+	let showModal = false;
+	let selectedEmail: Email | null = null;
+	let isProcessing = false;
+	let successMessage = '';
+	let errorMessage = '';
 
 	async function loadHistory() {
 		loading = true;
@@ -96,6 +103,12 @@
 
 	onMount(() => {
 		loadHistory();
+		// Add keyboard event listener for Escape key
+		window.addEventListener('keydown', handleKeydown);
+		
+		return () => {
+			window.removeEventListener('keydown', handleKeydown);
+		};
 	});
 
 	function handleFilterChange() {
@@ -149,6 +162,57 @@
 				return 'bg-red-100 text-red-800 border-red-200';
 			default:
 				return 'bg-blue-100 text-blue-600 border-blue-200';
+		}
+	}
+
+	function openModal(email: Email) {
+		selectedEmail = email;
+		showModal = true;
+		successMessage = '';
+		errorMessage = '';
+		// Focus management will be handled by Svelte's auto-focus
+	}
+
+	function closeModal() {
+		showModal = false;
+		selectedEmail = null;
+		successMessage = '';
+		errorMessage = '';
+		isProcessing = false;
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape' && showModal) {
+			closeModal();
+		}
+	}
+
+	async function confirmToggle() {
+		if (!selectedEmail || isProcessing) return;
+
+		isProcessing = true;
+		errorMessage = '';
+		successMessage = '';
+
+		try {
+			const result = await fetchJson('/actions/toggle-ignored', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email_id: selectedEmail.id })
+			});
+
+			successMessage = result.message || 'Email forwarded and rule created successfully!';
+			
+			// Wait a moment to show success message, then close and reload
+			setTimeout(async () => {
+				closeModal();
+				await loadHistory();
+			}, 1500);
+		} catch (e: any) {
+			console.error('Failed to toggle ignored email', e);
+			// Extract error message from the response if available
+			errorMessage = e?.message || e?.detail || 'Failed to forward email and create rule. Please try again.';
+			isProcessing = false;
 		}
 	}
 </script>
@@ -354,14 +418,27 @@
 								class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors"
 							>
 								<td class="py-3 px-4">
-									<span
-										class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(
-											email.status
-										)}"
-									>
-										<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
-										{email.status}
-									</span>
+									{#if email.status === 'ignored'}
+										<button
+											on:click={() => openModal(email)}
+											class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(
+												email.status
+											)} cursor-pointer hover:opacity-80 transition-opacity"
+											title="Click to forward and create rule"
+										>
+											<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
+											{email.status}
+										</button>
+									{:else}
+										<span
+											class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(
+												email.status
+											)}"
+										>
+											<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
+											{email.status}
+										</span>
+									{/if}
 								</td>
 								<td class="py-3 px-4 font-medium text-text-main">
 									<div class="truncate max-w-[300px]" title={email.subject}>
@@ -485,6 +562,101 @@
 					</div>
 				{/each}
 			{/if}
+		</div>
+	</div>
+{/if}
+
+<!-- Modal for confirming toggle action -->
+{#if showModal && selectedEmail}
+	<div
+		class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+		on:click={closeModal}
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="modal-title"
+		aria-describedby="modal-description"
+	>
+		<div
+			class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
+			on:click={(e) => e.stopPropagation()}
+		>
+			<!-- Modal Header -->
+			<div class="flex items-center justify-between mb-4">
+				<h3 id="modal-title" class="text-lg font-bold text-text-main">Forward Ignored Email</h3>
+				<button
+					on:click={closeModal}
+					class="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+					title="Close"
+					aria-label="Close modal"
+				>
+					<X size={20} class="text-text-secondary" />
+				</button>
+			</div>
+
+			<!-- Success Message -->
+			{#if successMessage}
+				<div class="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-2">
+					<CheckCircle size={20} class="text-emerald-600 flex-shrink-0 mt-0.5" />
+					<p class="text-sm text-emerald-800">{successMessage}</p>
+				</div>
+			{/if}
+
+			<!-- Error Message -->
+			{#if errorMessage}
+				<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+					<AlertCircle size={20} class="text-red-600 flex-shrink-0 mt-0.5" />
+					<p class="text-sm text-red-800">{errorMessage}</p>
+				</div>
+			{/if}
+
+			<!-- Modal Content -->
+			<div class="mb-6">
+				<p id="modal-description" class="text-text-secondary mb-4">
+					This email was marked as ignored. Do you want to forward it and create a rule to
+					automatically forward similar emails in the future?
+				</p>
+
+				<div class="bg-gray-50 rounded-lg p-4 space-y-2">
+					<div>
+						<span class="text-xs font-semibold text-text-secondary uppercase">Subject:</span>
+						<p class="text-sm text-text-main break-words">{selectedEmail.subject}</p>
+					</div>
+					<div>
+						<span class="text-xs font-semibold text-text-secondary uppercase">Sender:</span>
+						<p class="text-sm text-text-main break-words">{selectedEmail.sender}</p>
+					</div>
+					{#if selectedEmail.reason}
+						<div>
+							<span class="text-xs font-semibold text-text-secondary uppercase">Reason:</span>
+							<p class="text-sm text-text-main">{selectedEmail.reason}</p>
+						</div>
+					{/if}
+				</div>
+			</div>
+
+			<!-- Modal Actions -->
+			<div class="flex gap-3 justify-end">
+				<button 
+					on:click={closeModal} 
+					class="btn btn-secondary"
+					disabled={isProcessing}
+				> 
+					Cancel 
+				</button>
+				<button 
+					on:click={confirmToggle} 
+					class="btn btn-primary"
+					disabled={isProcessing}
+				>
+					{#if isProcessing}
+						<RefreshCw size={16} class="animate-spin" />
+						Processing...
+					{:else}
+						<RefreshCw size={16} />
+						Forward & Create Rule
+					{/if}
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}

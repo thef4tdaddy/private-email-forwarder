@@ -62,9 +62,7 @@ describe('Settings Component', () => {
 		await waitFor(() => {
 			expect(screen.getByText('Run Email Check')).toBeTruthy();
 			expect(
-				screen.getByText(
-					/Do you want to run the email check now\? This will process all emails/i
-				)
+				screen.getByText(/Do you want to run the email check now\? This will process all emails/i)
 			).toBeTruthy();
 		});
 

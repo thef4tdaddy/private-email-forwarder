@@ -133,7 +133,7 @@ describe('ConfirmDialog Component', () => {
 		const onConfirm = vi.fn();
 		const onCancel = vi.fn();
 
-		const { container } = render(ConfirmDialog, {
+		render(ConfirmDialog, {
 			isOpen: true,
 			onConfirm,
 			onCancel,
@@ -150,7 +150,7 @@ describe('ConfirmDialog Component', () => {
 		const onConfirm = vi.fn();
 		const onCancel = vi.fn();
 
-		const { container } = render(ConfirmDialog, {
+		render(ConfirmDialog, {
 			isOpen: true,
 			onConfirm,
 			onCancel,

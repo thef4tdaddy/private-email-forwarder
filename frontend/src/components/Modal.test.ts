@@ -166,7 +166,7 @@ describe('Modal Component', () => {
 
 	it('focuses first focusable element when modal opens', async () => {
 		const onClose = vi.fn();
-		const { container } = render(Modal, {
+		render(Modal, {
 			isOpen: true,
 			onClose,
 			title: 'Test Modal',

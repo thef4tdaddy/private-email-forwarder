@@ -38,8 +38,7 @@
 
 		// Handle Tab key for focus trapping
 		if (e.key === 'Tab' && isOpen && modalElement) {
-			const focusableElements =
-				modalElement.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+			const focusableElements = modalElement.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
 			const focusableArray = Array.from(focusableElements);
 
 			if (focusableArray.length === 0) return;
@@ -71,8 +70,7 @@
 			// Focus the modal after a brief delay to ensure it's rendered
 			setTimeout(() => {
 				if (modalElement) {
-					const focusableElements =
-						modalElement.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+					const focusableElements = modalElement.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
 					if (focusableElements.length > 0) {
 						focusableElements[0].focus();
 					} else {
