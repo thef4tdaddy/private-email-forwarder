@@ -37,11 +37,6 @@ from starlette.requests import Request
 
 app = FastAPI(title="Receipt Forwarder API", lifespan=lifespan)
 
-# Session Middleware (Required for Auth)
-app.add_middleware(
-    SessionMiddleware, secret_key=os.environ.get("SECRET_KEY", "CHANGEME_DEV_KEY")
-)
-
 
 # Custom Auth Middleware
 @app.middleware("http")
@@ -74,6 +69,11 @@ app.include_router(dashboard.router)
 app.include_router(settings.router)
 app.include_router(history.router)
 app.include_router(actions.router)
+
+# Session Middleware (Required for Auth) - Added LAST to be OUTERMOST (runs first)
+app.add_middleware(
+    SessionMiddleware, secret_key=os.environ.get("SECRET_KEY", "CHANGEME_DEV_KEY")
+)
 
 
 # Mount API first
