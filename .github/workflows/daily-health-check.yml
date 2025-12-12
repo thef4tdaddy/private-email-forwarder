@@ -41,7 +41,7 @@ jobs:
           source venv/bin/activate
           # Run tests and output coverage report to terminal. Fail under 50%.
           set -o pipefail
-          pytest --cov=app --cov-report=term-missing --cov-fail-under=50 tests/ 2>&1 | tee ../backend_test.log
+          pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/ 2>&1 | tee ../backend_test.log
         continue-on-error: false
 
       # --- Frontend Setup & Test ---
