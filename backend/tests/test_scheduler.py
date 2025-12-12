@@ -82,6 +82,7 @@ def test_process_emails_creates_run_with_no_emails(
         "WIFE_EMAIL": "wife@example.com",
         "GMAIL_EMAIL": "test@example.com",
         "GMAIL_PASSWORD": "password",
+        "EMAIL_ACCOUNTS": "",  # Ensure no multi-account processing
     },
 )
 @patch("backend.services.scheduler.engine")
@@ -164,9 +165,10 @@ def test_start_scheduler_uses_poll_interval(mock_scheduler):
 @patch.dict(
     os.environ,
     {
-        "POLL_INTERVAL": "30",
+        "POLL_INTERVAL": "60",
         "GMAIL_EMAIL": "test@example.com",
-        "GMAIL_PASSWORD": "pass",
+        "GMAIL_PASSWORD": "password",
+        "EMAIL_ACCOUNTS": "",  # Ensure no multi-account processing
     },
 )
 @patch("backend.services.scheduler.engine")
