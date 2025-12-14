@@ -328,6 +328,10 @@ class ReceiptDetector:
         if "subscribe & save" in text or "subscription order" in text:
             return False
 
+        # Exempt government-related senders from being treated as promotional
+        if any(gov in sender for gov in ["irs", "dmv", "gov"]):
+            return False
+
         if any(keyword in subject for keyword in promotional_keywords):
             return True
 
@@ -418,6 +422,8 @@ class ReceiptDetector:
             "subscription order",
             "ordered",
             "ordered:",
+            "renewal",
+            "license plate renewal",
         ]
 
         if not any(
