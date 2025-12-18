@@ -1,5 +1,3 @@
-import os
-
 import pytest
 from backend.security import decrypt_content, encrypt_content, get_fernet
 from cryptography.fernet import Fernet
