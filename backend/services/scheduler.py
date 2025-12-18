@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 
 scheduler = BackgroundScheduler()
 
-import json
+
 from datetime import timedelta
 
 from backend.security import encrypt_content
@@ -27,10 +27,18 @@ def redact_email(email):
     if len(name) <= 2:
         redacted = "*" * len(name)
     else:
-        redacted = name[0] + "*" * (len(name)-2) + name[-1]
+        redacted = name[0] + "*" * (len(name) - 2) + name[-1]
     return f"{redacted}@{domain}"
 
+
 def process_emails():
+    # 0. Check for SECRET_KEY to ensure encryption services are available
+    if not os.environ.get("SECRET_KEY"):
+        print(
+            "❌ SECRET_KEY not set. Skipping email processing to prevent encryption errors."
+        )
+        return
+
     print("🔄 Checking for new emails...")
 
     # Get the poll interval for tracking

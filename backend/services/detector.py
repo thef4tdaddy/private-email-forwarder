@@ -1,5 +1,4 @@
 import fnmatch
-import json
 import os
 import re
 from typing import Any, Dict, List, Optional, Union
@@ -34,21 +33,14 @@ class ReceiptDetector:
             try:
 
                 # 1. Manual Rules (Priority ordering)
-                rules = session.exec(
-                    select(ManualRule).order_by(ManualRule.priority.desc())
-                ).all()
-                for rule in rules:
-                    matches = True
-                    if rule.email_pattern:
-                        if not fnmatch.fnmatch(sender, rule.email_pattern.lower()):
-                            matches = False
-                    if matches and rule.subject_pattern:
-                        if not fnmatch.fnmatch(subject, rule.subject_pattern.lower()):
-                            matches = False
-
-                    if matches:
-                        print(f"✅ Manual rule match: {rule.purpose or 'No purpose'}")
-                        return True
+                matched_rule = ReceiptDetector._check_manual_rules(
+                    subject, sender, session
+                )
+                if matched_rule:
+                    print(
+                        f"✅ Manual rule match: {matched_rule.purpose or 'No purpose'}"
+                    )
+                    return True
 
                 # 2. Preferences (Always Forward)
                 always_forward = session.exec(
@@ -137,37 +129,46 @@ class ReceiptDetector:
         }
 
         # Check Manual Rules
-        if session:
-
-            rules = session.exec(
-                select(ManualRule).order_by(ManualRule.priority.desc())
-            ).all()
-            for rule in rules:
-                matches = True
-                if rule.email_pattern:
-                    if not fnmatch.fnmatch(sender, rule.email_pattern.lower()):
-                        matches = False
-                if matches and rule.subject_pattern:
-                    if not fnmatch.fnmatch(subject, rule.subject_pattern.lower()):
-                        matches = False
-
-                if matches:
-                    trace["steps"].append(
-                        {
-                            "step": "Manual Rule",
-                            "result": True,
-                            "detail": f"Matched rule: {rule.purpose}",
-                        }
-                    )
-                    trace["final_decision"] = True
-                    trace["matched_by"] = "Manual Rule"
-                    return trace
+        matched_rule = ReceiptDetector._check_manual_rules(subject, sender, session)
+        if matched_rule:
+            trace["steps"].append(
+                {
+                    "step": "Manual Rule",
+                    "result": True,
+                    "detail": f"Matched rule: {matched_rule.purpose}",
+                }
+            )
+            trace["final_decision"] = True
+            trace["matched_by"] = "Manual Rule"
+            return trace
 
         # ... (rest of trace logic would follow same structure as is_receipt)
         # Simplified for now, will expand as needed.
         decision = ReceiptDetector.is_receipt(email, session)
         trace["final_decision"] = decision
         return trace
+
+    @staticmethod
+    def _check_manual_rules(
+        subject: str, sender: str, session: Any
+    ) -> Optional[ManualRule]:
+        """Helper to check if any manual rule matches."""
+        if not session:
+            return None
+        rules = session.exec(
+            select(ManualRule).order_by(ManualRule.priority.desc())
+        ).all()
+        for rule in rules:
+            matches = True
+            if rule.email_pattern:
+                if not fnmatch.fnmatch(sender, rule.email_pattern.lower()):
+                    matches = False
+            if matches and rule.subject_pattern:
+                if not fnmatch.fnmatch(subject, rule.subject_pattern.lower()):
+                    matches = False
+            if matches:
+                return rule
+        return None
 
     @staticmethod
     def is_reply_or_forward(subject: str, sender: str) -> bool:

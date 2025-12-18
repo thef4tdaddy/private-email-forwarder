@@ -1,7 +1,7 @@
 import pytest
 from backend.main import app
 from backend.models import ManualRule, Preference
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
 

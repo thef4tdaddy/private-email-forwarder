@@ -24,7 +24,7 @@ def test_check_auth(monkeypatch):
 
     response = client.get("/api/auth/me")
     assert response.status_code == 200
-    assert response.json()["authenticated"] == True
+    assert response.json()["authenticated"] is True
 
 
 def test_check_auth_failure():
