@@ -1,4 +1,3 @@
-import pytest
 from backend.services.detector import ReceiptDetector
 
 

@@ -70,7 +70,7 @@ class LearningService:
         sender = email_data.get("from", "").lower()
 
         shadow_rules = session.exec(
-            select(ManualRule).where(ManualRule.is_shadow_mode == True)
+            select(ManualRule).where(ManualRule.is_shadow_mode)
         ).all()
 
         for rule in shadow_rules:
@@ -106,7 +106,7 @@ class LearningService:
 
         candidates = session.exec(
             select(ManualRule)
-            .where(ManualRule.is_shadow_mode == True)
+            .where(ManualRule.is_shadow_mode)
             .where(ManualRule.confidence >= auto_promote_confidence)
             .where(ManualRule.match_count >= auto_promote_matches)
         ).all()

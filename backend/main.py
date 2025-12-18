@@ -1,8 +1,6 @@
 import os
 from contextlib import asynccontextmanager
 
-from backend.models import \
-    ProcessedEmail  # Keep if logically needed for Alembic or others, or remove if truly unused. CI says unused. Removing.
 from backend.routers import actions, auth, dashboard, history, settings
 from backend.services.scheduler import start_scheduler, stop_scheduler
 from fastapi import FastAPI
@@ -13,6 +11,25 @@ from starlette.requests import Request
 
 # actually CI says backend.models.ProcessedEmail imported but unused.
 # backend.database.create_db_and_tables imported but unused.
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    # Check/Run Alembic Migrations (Handles legacy DB stamping + new upgrades)
+    try:
+        from backend.migration_utils import run_migrations
+
+        run_migrations()
+    except Exception as e:
+        print(f"Startup Migration Error: {e}")
+
+    print("Startup: Database checks complete.")
+    start_scheduler()
+    yield
+    # Shutdown
+    stop_scheduler()
+    print("Shutdown: App stopping.")
 
 
 app = FastAPI(title="Receipt Forwarder API", lifespan=lifespan)

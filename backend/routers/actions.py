@@ -46,7 +46,7 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
         now_ts = datetime.now(timezone.utc).timestamp()
         if now_ts - link_ts > 7 * 24 * 3600:  # 7 days
             return "<h1>❌ Link Expired</h1><p>This action link is too old.</p>"
-    except:
+    except Exception:
         return "<h1>❌ Invalid Timestamp</h1>"
 
     # Execute Command
@@ -269,7 +269,7 @@ def toggle_ignored_email(
 
     # 2b. Universal Fallback: If not found, try all other accounts
     if not original_content:
-        print(f"DEBUG: Email not found in initial account, trying all accounts...")
+        print("DEBUG: Email not found in initial account, trying all accounts...")
         try:
             accounts_json = os.environ.get("EMAIL_ACCOUNTS")
             if accounts_json:
@@ -296,7 +296,7 @@ def toggle_ignored_email(
                         )
                         if original_content:
                             print(
-                                f"DEBUG: Found email in fallback account: [REDACTED_ACCOUNT]"
+                                "DEBUG: Found email in fallback account: [REDACTED_ACCOUNT]"
                             )
                             break
         except Exception as e:
@@ -305,7 +305,7 @@ def toggle_ignored_email(
     # 3. Construct body
     if original_content:
         # Use the fetched content
-        body_text = original_content.get("body", "")
+        original_content.get("body", "")
         # If we have HTML but no text, maybe use HTML?
         # EmailForwarder usually takes 'body' as text/html depending on structure.
         # But here we pass a single 'body' string.

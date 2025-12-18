@@ -42,7 +42,7 @@ def parse_iso_date(date_str: str) -> datetime:
     """
     try:
         return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-    except (ValueError, AttributeError) as e:
+    except (ValueError, AttributeError):
         raise HTTPException(
             status_code=400,
             detail=f"Invalid date format: {date_str}. Expected ISO 8601 format (e.g., 2025-12-10T10:00:00Z)",
@@ -200,7 +200,7 @@ def reprocess_all_ignored(session: Session = Depends(get_session)):
         select(ProcessedEmail)
         .where(ProcessedEmail.status == "ignored")
         .where(ProcessedEmail.processed_at >= day_ago)
-        .where(ProcessedEmail.encrypted_body != None)
+        .where(ProcessedEmail.encrypted_body is not None)
     ).all()
 
     reprocessed_count = 0

@@ -673,8 +673,6 @@ class TestHistoryReprocess:
         # Check if shadow rule was created
         from backend.models import ManualRule
 
-        rule = session.exec(
-            select(ManualRule).where(ManualRule.is_shadow_mode == True)
-        ).first()
+        rule = session.exec(select(ManualRule).where(ManualRule.is_shadow_mode)).first()
         assert rule is not None
         assert rule.email_pattern == "*@example.com"

@@ -1,7 +1,7 @@
 import fnmatch
 import os
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 from sqlmodel import select
 
@@ -112,7 +112,7 @@ class ReceiptDetector:
         subject = (
             getattr(email, "subject", None) or email.get("subject", "") or ""
         ).lower()
-        body = (getattr(email, "body", None) or email.get("body", "") or "").lower()
+        (getattr(email, "body", None) or email.get("body", "") or "").lower()
         sender = (
             getattr(email, "sender", None)
             or email.get("from", None)
