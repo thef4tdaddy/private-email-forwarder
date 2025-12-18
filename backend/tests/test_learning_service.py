@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import pytest
 from backend.models import ManualRule, ProcessedEmail
 from backend.services.learning_service import LearningService
