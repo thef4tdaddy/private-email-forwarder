@@ -99,7 +99,7 @@ jobs:
       - name: Run Tests
         id: pytest
         working-directory: backend
-        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=50 tests/ || true
+        run: pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/ || true
 
       - name: Check Status
         if: always()

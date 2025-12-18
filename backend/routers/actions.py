@@ -200,7 +200,7 @@ def toggle_ignored_email(
 
     # Create a manual rule based on the email sender
     # Extract email address from sender using RFC 5322 compliant parser
-    sender = email.sender
+    sender = email.sender or ""
     # parseaddr returns (realname, email_address)
     _, email_pattern = parseaddr(sender)
 
@@ -218,9 +218,8 @@ def toggle_ignored_email(
     ).first()
     if not existing_rule:
         # Truncate subject intelligently with ellipsis
-        truncated_subject = (
-            email.subject[:47] + "..." if len(email.subject) > 50 else email.subject
-        )
+        subj = email.subject or ""
+        truncated_subject = subj[:47] + "..." if len(subj) > 50 else subj
         manual_rule = ManualRule(
             email_pattern=email_pattern,
             subject_pattern=None,

@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 @router.get("/activity", response_model=List[ProcessedEmail])
 def get_activity(limit: int = 50, session: Session = Depends(get_session)):
     statement = (
-        select(ProcessedEmail).order_by(ProcessedEmail.processed_at.desc()).limit(limit)
+        select(ProcessedEmail).order_by(ProcessedEmail.processed_at.desc()).limit(limit)  # type: ignore
     )
     return session.exec(statement).all()
 

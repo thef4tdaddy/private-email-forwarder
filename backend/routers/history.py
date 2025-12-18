@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from backend.database import get_session
 from backend.models import ManualRule, ProcessedEmail, ProcessingRun
@@ -111,12 +111,13 @@ def reprocess_email(email_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Email not found")
 
     # 1. Get content from encrypted storage
-    body = decrypt_content(email.encrypted_body)
-    html_body = decrypt_content(email.encrypted_html)
+    body = decrypt_content(email.encrypted_body) if email.encrypted_body else ""
+    html_body = decrypt_content(email.encrypted_html) if email.encrypted_html else ""
 
     # 2. Fallback to IMAP if content is gone (retention expired)
     if not body and not html_body:
-        creds = EmailService.get_credentials_for_account(email.account_email)
+        acc_email = email.account_email or ""
+        creds = EmailService.get_credentials_for_account(acc_email)
         if not creds:
             raise HTTPException(
                 status_code=400,
@@ -275,7 +276,7 @@ def get_history_stats(
     total_amount = sum(e.amount for e in emails if e.amount)
 
     # Group by status
-    status_breakdown = {}
+    status_breakdown: Dict[str, int] = {}
     for email in emails:
         status = email.status
         status_breakdown[status] = status_breakdown.get(status, 0) + 1
@@ -296,7 +297,7 @@ def get_recent_runs(
 ):
     """Get aggregated information about recent processing runs"""
     # Query the actual ProcessingRun table
-    query = select(ProcessingRun).order_by(ProcessingRun.started_at.desc()).limit(limit)
+    query = select(ProcessingRun).order_by(ProcessingRun.started_at.desc()).limit(limit)  # type: ignore
     runs_db = session.exec(query).all()
 
     runs = []
@@ -335,7 +336,7 @@ def get_processing_runs(
     """Get processing run history with pagination"""
     statement = (
         select(ProcessingRun)
-        .order_by(ProcessingRun.started_at.desc())
+        .order_by(ProcessingRun.started_at.desc())  # type: ignore
         .offset(skip)
         .limit(limit)
     )
