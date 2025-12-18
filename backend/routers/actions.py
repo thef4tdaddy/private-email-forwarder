@@ -262,8 +262,8 @@ def toggle_ignored_email(
     # 2. Fetch content
     original_content = None
     if email_user and email_pass:
-        # Do not log credentials or server: Only log account identifier
-        print(f"DEBUG: Fetching email {email.email_id} for user {email_user}")
+        # Do not log credentials, passwords, or account objects. Only log minimal, non-sensitive account identifier.
+        print(f"DEBUG: Fetching email {email.email_id} for account {email_user if email_user else '[unknown]'}")
         original_content = EmailService.fetch_email_by_id(
             email_user, email_pass, email.email_id, imap_server
         )
@@ -285,8 +285,9 @@ def toggle_ignored_email(
                         continue
 
                     if fallback_user and fallback_pass:
+                        # Do not log fallback_pass or full account dicts. Only log minimal, non-sensitive identifiers.
                         print(
-                            f"DEBUG: Fallback attempt for {email.email_id} on {fallback_user}"
+                            f"DEBUG: Fallback attempt for {email.email_id} on account {fallback_user if fallback_user else '[unknown]'}"
                         )
                         original_content = EmailService.fetch_email_by_id(
                             fallback_user,
@@ -296,7 +297,7 @@ def toggle_ignored_email(
                         )
                         if original_content:
                             print(
-                                f"DEBUG: Found email in fallback account: {fallback_user}"
+                                f"DEBUG: Found email in fallback account: {fallback_user if fallback_user else '[unknown]'}"
                             )
                             break
         except Exception as e:
