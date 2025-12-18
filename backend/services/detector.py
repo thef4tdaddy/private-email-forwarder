@@ -27,6 +27,11 @@ class ReceiptDetector:
             print(f"🚫 Excluded reply/forward email: {subject}")
             return False
 
+        # STEP 0.5: Check for strong receipt indicators (OVERRIDES promotional filter)
+        if ReceiptDetector.has_strong_receipt_indicators(subject, body):
+            print(f"✅ Strong receipt indicators found: {subject}")
+            return True
+
         # STEP 1: HARD EXCLUDE spam/promotional emails
         if ReceiptDetector.is_promotional_email(subject, body, sender):
             print(f"🚫 Excluded promotional email: {subject}")
@@ -36,11 +41,6 @@ class ReceiptDetector:
         if ReceiptDetector.is_shipping_notification(subject, body, sender):
             print(f"🚫 Excluded shipping notification: {subject}")
             return False
-
-        # STEP 2: Check for strong receipt indicators
-        if ReceiptDetector.has_strong_receipt_indicators(subject, body):
-            print(f"✅ Strong receipt indicators found: {subject}")
-            return True
 
         # STEP 3: Check for transactional patterns (order + amount + confirmation)
         transactional_score = ReceiptDetector.calculate_transactional_score(
@@ -328,6 +328,10 @@ class ReceiptDetector:
         if "subscribe & save" in text or "subscription order" in text:
             return False
 
+        # Exempt government-related senders from being treated as promotional
+        if any(gov in sender for gov in ["irs", "dmv", "gov"]):
+            return False
+
         if any(keyword in subject for keyword in promotional_keywords):
             return True
 
@@ -416,6 +420,10 @@ class ReceiptDetector:
             "amount charged",
             "subscribe & save",
             "subscription order",
+            "ordered",
+            "ordered:",
+            "renewal",
+            "license plate renewal",
         ]
 
         if not any(
