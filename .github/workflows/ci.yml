@@ -75,6 +75,12 @@ jobs:
         run: ruff check . --output-format=github
         continue-on-error: true
 
+      - name: Check Formatting with Black
+        id: black
+        working-directory: backend
+        run: black --check .
+        continue-on-error: true
+
       - name: Typecheck with Mypy
         id: mypy
         working-directory: backend
@@ -89,7 +95,7 @@ jobs:
       - name: Check Status
         if: always()
         run: |
-          if [ "${{ steps.ruff.outcome }}" == "failure" ] || [ "${{ steps.mypy.outcome }}" == "failure" ]; then
+          if [ "${{ steps.ruff.outcome }}" == "failure" ] || [ "${{ steps.mypy.outcome }}" == "failure" ] || [ "${{ steps.black.outcome }}" == "failure" ]; then
             echo "One or more steps failed."
             exit 1
           fi

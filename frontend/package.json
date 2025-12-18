@@ -21,6 +21,7 @@
       "eslint --fix"
     ],
     "../backend/**/*.py": [
+      "../venv/bin/ruff check",
       "../venv/bin/black",
       "../venv/bin/isort"
     ]
