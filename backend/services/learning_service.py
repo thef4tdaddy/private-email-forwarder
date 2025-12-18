@@ -56,7 +56,9 @@ class LearningService:
         if keywords:
             # Take the most unique keyword or first two
             suggested_rule["subject_pattern"] = f"*{keywords[0]}*"
-            suggested_rule["confidence"] = (suggested_rule["confidence"] or 0.0) + 0.1
+            suggested_rule["confidence"] = (
+                float(suggested_rule["confidence"] or 0.0) + 0.1
+            )
 
         return suggested_rule
 

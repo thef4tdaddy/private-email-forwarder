@@ -112,7 +112,7 @@ class CommandService:
 
         try:
             msg = MIMEMultipart()
-            msg["From"] = sender_email
+            msg["From"] = sender_email or ""
             msg["To"] = target_email
             msg["Subject"] = "SentinelShare Command Confirmed"
 
@@ -120,7 +120,7 @@ class CommandService:
 
             with smtplib.SMTP(smtp_server, smtp_port) as server:
                 server.starttls()
-                server.login(sender_email, password)
+                server.login(sender_email or "", password or "")
                 server.send_message(msg)
                 print(f"📨 Confirmation sent to {target_email}")
         except Exception as e:
