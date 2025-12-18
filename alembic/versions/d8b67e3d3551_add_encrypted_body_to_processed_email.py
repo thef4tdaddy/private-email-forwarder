@@ -11,7 +11,6 @@ from alembic import op
 import sqlalchemy as sa
 
 import sqlmodel
-
 # revision identifiers, used by Alembic.
 revision: str = 'd8b67e3d3551'
 down_revision: Union[str, None] = 'a00b127276e3'
