@@ -1,7 +1,6 @@
 import pytest
 from backend.main import app
 from backend.models import ManualRule, Preference
-from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
