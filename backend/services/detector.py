@@ -120,7 +120,7 @@ class ReceiptDetector:
             or ""
         ).lower()
 
-        trace = {
+        trace: Dict[str, Any] = {
             "subject": subject,
             "sender": sender,
             "steps": [],

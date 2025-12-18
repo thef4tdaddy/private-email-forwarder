@@ -260,7 +260,7 @@ class TestManualRule:
         session.add(rule3)
         session.commit()
 
-        rules = session.exec(select(ManualRule).order_by(ManualRule.priority)).all()
+        rules = session.exec(select(ManualRule).order_by(ManualRule.priority)).all()  # type: ignore
 
         assert len(rules) == 3
         assert rules[0].priority == 1

@@ -121,17 +121,37 @@ jobs:
             const run_id = context.runId;
             const run_url = `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
 
-            const frontendResult = '${{ needs.frontend-check.result }}';
-            const backendResult = '${{ needs.backend-check.result }}';
+            // Frontend Results
+            const f_lint = '${{ needs.frontend-check.outputs.lint_status }}';
+            const f_type = '${{ needs.frontend-check.outputs.typecheck_status }}';
+            const f_build = '${{ needs.frontend-check.outputs.build_status }}';
+
+            // Backend Results
+            const b_ruff = '${{ needs.backend-check.outputs.ruff_status }}';
+            const b_black = '${{ needs.backend-check.outputs.black_status }}';
+            const b_mypy = '${{ needs.backend-check.outputs.mypy_status }}';
+            const b_test = '${{ needs.backend-check.outputs.pytest_status }}';
+
+            const icon = (status) => status === 'success' ? '✅' : (status === 'skipped' ? '⚪' : '❌');
 
             const body = `### ❌ CI Failure
 
             The pipeline failed. Here is the breakdown:
 
-            | Job | Status |
-            |-----|--------|
-            | **Frontend** | ${frontendResult === 'success' ? '✅ Passing' : '❌ Failed'} |
-            | **Backend** | ${backendResult === 'success' ? '✅ Passing' : '❌ Failed'} |
+            #### 🎨 Frontend
+            | Check | Status |
+            |-------|--------|
+            | ESLint | ${icon(f_lint)} |
+            | Typecheck | ${icon(f_type)} |
+            | Build | ${icon(f_build)} |
+
+            #### 🐍 Backend
+            | Check | Status |
+            |-------|--------|
+            | Ruff (Lint) | ${icon(b_ruff)} |
+            | Black (Format) | ${icon(b_black)} |
+            | Mypy (Types) | ${icon(b_mypy)} |
+            | Pytest (Tests) | ${icon(b_test)} |
 
             [View Full Logs](${run_url})`;
 
