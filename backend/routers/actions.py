@@ -263,13 +263,7 @@ def toggle_ignored_email(
     original_content = None
     if email_user and email_pass:
         # Do not log credentials, passwords, or account objects. Only log minimal, non-sensitive account identifier.
-        # Reduct the email for safety
-        safe_user = (
-            f"{email_user[:2]}***@{email_user.split('@')[-1]}"
-            if email_user and "@" in email_user
-            else "UNKNOWN"
-        )
-        print(f"DEBUG: Fetching email {email.email_id} for account {safe_user}")
+        print(f"DEBUG: Fetching email {email.email_id} for [REDACTED_ACCOUNT]")
         original_content = EmailService.fetch_email_by_id(
             email_user, email_pass, email.email_id, imap_server
         )
@@ -292,13 +286,8 @@ def toggle_ignored_email(
 
                     if fallback_user and fallback_pass:
                         # Do not log fallback_pass or full account dicts. Only log minimal, non-sensitive identifiers.
-                        safe_fallback = (
-                            f"{fallback_user[:2]}***@{fallback_user.split('@')[-1]}"
-                            if fallback_user and "@" in fallback_user
-                            else "UNKNOWN"
-                        )
                         print(
-                            f"DEBUG: Fallback attempt for {email.email_id} on account {safe_fallback}"
+                            f"DEBUG: Fallback attempt for {email.email_id} on account [REDACTED_ACCOUNT]"
                         )
                         original_content = EmailService.fetch_email_by_id(
                             fallback_user,
@@ -308,7 +297,7 @@ def toggle_ignored_email(
                         )
                         if original_content:
                             print(
-                                f"DEBUG: Found email in fallback account: {safe_fallback}"
+                                f"DEBUG: Found email in fallback account: [REDACTED_ACCOUNT]"
                             )
                             break
         except Exception as e:
