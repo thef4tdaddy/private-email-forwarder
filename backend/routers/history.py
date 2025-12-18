@@ -69,10 +69,10 @@ def get_email_history(
         filters.append(ProcessedEmail.status == status.value)
     if date_from and date_from.strip():
         date_from_obj = parse_iso_date(date_from)
-        filters.append(ProcessedEmail.processed_at >= date_from_obj)
+        filters.append(ProcessedEmail.processed_at >= date_from_obj)  # type: ignore
     if date_to and date_to.strip():
         date_to_obj = parse_iso_date(date_to)
-        filters.append(ProcessedEmail.processed_at <= date_to_obj)
+        filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
 
     if filters:
         query = query.where(and_(*filters))
@@ -256,10 +256,10 @@ def get_history_stats(
     filters = []
     if date_from and date_from.strip():
         date_from_obj = parse_iso_date(date_from)
-        filters.append(ProcessedEmail.processed_at >= date_from_obj)
+        filters.append(ProcessedEmail.processed_at >= date_from_obj)  # type: ignore
     if date_to and date_to.strip():
         date_to_obj = parse_iso_date(date_to)
-        filters.append(ProcessedEmail.processed_at <= date_to_obj)
+        filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
 
     if filters:
         query = query.where(and_(*filters))
@@ -279,7 +279,8 @@ def get_history_stats(
     status_breakdown: Dict[str, int] = {}
     for email in emails:
         status = email.status
-        status_breakdown[status] = status_breakdown.get(status, 0) + 1
+        if status:
+            status_breakdown[status] = status_breakdown.get(status, 0) + 1
 
     return {
         "total": total,

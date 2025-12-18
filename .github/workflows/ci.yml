@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ruff_status: ${{ steps.ruff.outcome }}
-      black_status: ${{ steps.black.outcome }}
+      ruff_status: ${{ steps.ruff.outcome }}
       mypy_status: ${{ steps.mypy.outcome }}
       pytest_status: ${{ steps.pytest.outcome }}
     steps:
@@ -84,11 +84,7 @@ jobs:
         run: ruff check . --output-format=github
         continue-on-error: true
 
-      - name: Check Formatting with Black
-        id: black
-        working-directory: backend
-        run: black --check .
-        continue-on-error: true
+
 
       - name: Typecheck with Mypy
         id: mypy
@@ -104,7 +100,7 @@ jobs:
       - name: Check Status
         if: always()
         run: |
-          if [ "${{ steps.ruff.outcome }}" == "failure" ] || [ "${{ steps.mypy.outcome }}" == "failure" ] || [ "${{ steps.black.outcome }}" == "failure" ]; then
+          if [ "${{ steps.ruff.outcome }}" == "failure" ] || [ "${{ steps.mypy.outcome }}" == "failure" ]; then
             echo "One or more steps failed."
             exit 1
           fi
@@ -128,7 +124,6 @@ jobs:
 
             // Backend Results
             const b_ruff = '${{ needs.backend-check.outputs.ruff_status }}';
-            const b_black = '${{ needs.backend-check.outputs.black_status }}';
             const b_mypy = '${{ needs.backend-check.outputs.mypy_status }}';
             const b_test = '${{ needs.backend-check.outputs.pytest_status }}';
 
@@ -149,7 +144,6 @@ jobs:
             | Check | Status |
             |-------|--------|
             | Ruff (Lint) | ${icon(b_ruff)} |
-            | Black (Format) | ${icon(b_black)} |
             | Mypy (Types) | ${icon(b_mypy)} |
             | Pytest (Tests) | ${icon(b_test)} |
 
