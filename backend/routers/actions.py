@@ -261,16 +261,14 @@ def toggle_ignored_email(
     # 2. Fetch content
     original_content = None
     if email_user and email_pass:
-        print(
-            f"DEBUG: Fetching email {email.email_id} for {email_user} on {imap_server}"
-        )
+        print(f"DEBUG: Fetching email {email.email_id} for user on {imap_server}")
         original_content = EmailService.fetch_email_by_id(
             email_user, email_pass, email.email_id, imap_server
         )
 
     # 2b. Universal Fallback: If not found, try all other accounts
     if not original_content:
-        print(f"DEBUG: Email not found in {first_attempt_user}, trying all accounts...")
+        print(f"DEBUG: Email not found in initial account, trying all accounts...")
         try:
             accounts_json = os.environ.get("EMAIL_ACCOUNTS")
             if accounts_json:
