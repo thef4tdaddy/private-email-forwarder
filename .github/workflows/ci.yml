@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ruff_status: ${{ steps.ruff.outcome }}
-      ruff_status: ${{ steps.ruff.outcome }}
+
       mypy_status: ${{ steps.mypy.outcome }}
       pytest_status: ${{ steps.pytest.outcome }}
     steps:
@@ -83,8 +83,6 @@ jobs:
         working-directory: backend
         run: ruff check . --output-format=github
         continue-on-error: true
-
-
 
       - name: Typecheck with Mypy
         id: mypy
