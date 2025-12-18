@@ -5,7 +5,6 @@ import json
 import os
 from datetime import datetime, timezone
 from email.utils import parseaddr
-from typing import Optional
 
 from backend.constants import DEFAULT_MANUAL_RULE_PRIORITY
 from backend.database import engine, get_session
