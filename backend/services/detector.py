@@ -55,7 +55,7 @@ class ReceiptDetector:
                 # 3. Preferences (Blocked Sender / Category)
                 blocked = session.exec(
                     select(Preference).where(
-                        Preference.type.in_(["Blocked Sender", "Blocked Category"])
+                        Preference.type.in_(["Blocked Sender", "Blocked Category"])  # type: ignore
                     )
                 ).all()
                 for pref in blocked:
@@ -156,7 +156,7 @@ class ReceiptDetector:
         if not session:
             return None
         rules = session.exec(
-            select(ManualRule).order_by(ManualRule.priority.desc())
+            select(ManualRule).order_by(ManualRule.priority.desc())  # type: ignore
         ).all()
         for rule in rules:
             matches = True

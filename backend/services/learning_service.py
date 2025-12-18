@@ -19,12 +19,12 @@ class LearningService:
         Creates a suggested ManualRule based on a single email's properties.
         Focuses on domain-level and subject keyword patterns.
         """
-        sender = email.sender.lower()
-        subject = email.subject.lower()
+        s_text = (email.sender or "").lower()
+        b_text = (email.subject or "").lower()
 
         # 1. Extract domain
-        domain_match = re.search(r"@([\w.-]+)", sender)
-        domain = domain_match.group(1) if domain_match else sender
+        domain_match = re.search(r"@([\w.-]+)", s_text)
+        domain = domain_match.group(1) if domain_match else s_text
 
         # 2. Extract common keywords from subject (excluding common noise)
         noise = {
@@ -39,7 +39,7 @@ class LearningService:
         }
         keywords = [
             word
-            for word in re.findall(r"\w+", subject)
+            for word in re.findall(r"\w+", b_text)
             if word not in noise and len(word) > 3
         ]
 
@@ -56,7 +56,7 @@ class LearningService:
         if keywords:
             # Take the most unique keyword or first two
             suggested_rule["subject_pattern"] = f"*{keywords[0]}*"
-            suggested_rule["confidence"] += 0.1
+            suggested_rule["confidence"] = (suggested_rule["confidence"] or 0.0) + 0.1
 
         return suggested_rule
 

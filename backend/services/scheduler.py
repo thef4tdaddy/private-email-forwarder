@@ -1,7 +1,8 @@
 import os
 from datetime import datetime, timedelta, timezone
 
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.background import \
+    BackgroundScheduler  # type: ignore
 from backend.database import engine
 from backend.models import ProcessedEmail, ProcessingRun
 from backend.security import encrypt_content

@@ -533,6 +533,7 @@ def test_get_specific_processing_run(session: Session):
     session.refresh(run)
 
     # Get the run by ID
+    assert run.id is not None
     retrieved_run = history.get_processing_run(run.id, session=session)
 
     assert retrieved_run.id == run.id
@@ -545,11 +546,13 @@ def test_get_specific_processing_run(session: Session):
 def test_get_nonexistent_processing_run(session: Session):
     """Test retrieving a processing run that doesn't exist"""
     # Try to get a run that doesn't exist
-    with pytest.raises(Exception) as exc_info:
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc_info:
         history.get_processing_run(999, session=session)
 
     assert exc_info.value.status_code == 404
-    assert "not found" in exc_info.value.detail.lower()
+    assert "not found" in str(exc_info.value.detail).lower()
 
 
 def test_processing_run_pagination(session: Session):
@@ -646,6 +649,7 @@ class TestHistoryReprocess:
 
             from backend.routers.history import reprocess_email
 
+            assert email.id is not None
             result = reprocess_email(email_id=email.id, session=session)
 
             assert "analysis" in result
@@ -666,6 +670,7 @@ class TestHistoryReprocess:
 
         from backend.routers.history import submit_feedback
 
+        assert email.id is not None
         result = submit_feedback(email_id=email.id, is_receipt=True, session=session)
 
         assert result["status"] == "success"

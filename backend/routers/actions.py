@@ -240,7 +240,7 @@ def toggle_ignored_email(
     # Try to fetch the original email content
 
     # 1. Get credentials for the source account
-    creds = EmailService.get_credentials_for_account(email.account_email)
+    creds = EmailService.get_credentials_for_account(str(email.account_email))
 
     if not creds:
         # Fallback to SENDER_EMAIL if specific account not found

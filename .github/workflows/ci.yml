@@ -12,6 +12,10 @@ on:
 jobs:
   frontend-check:
     runs-on: ubuntu-latest
+    outputs:
+      lint_status: ${{ steps.lint.outcome }}
+      typecheck_status: ${{ steps.typecheck.outcome }}
+      build_status: ${{ steps.build.outcome }}
     steps:
       - uses: actions/checkout@v4
 
@@ -53,6 +57,11 @@ jobs:
 
   backend-check:
     runs-on: ubuntu-latest
+    outputs:
+      ruff_status: ${{ steps.ruff.outcome }}
+      black_status: ${{ steps.black.outcome }}
+      mypy_status: ${{ steps.mypy.outcome }}
+      pytest_status: ${{ steps.pytest.outcome }}
     steps:
       - uses: actions/checkout@v4
 
@@ -112,11 +121,19 @@ jobs:
             const run_id = context.runId;
             const run_url = `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
 
+            const frontendResult = '${{ needs.frontend-check.result }}';
+            const backendResult = '${{ needs.backend-check.result }}';
+
             const body = `### ❌ CI Failure
 
-            The CI workflow has failed. Please check the logs to resolve the issues.
+            The pipeline failed. Here is the breakdown:
 
-            [View Action Logs](${run_url})`;
+            | Job | Status |
+            |-----|--------|
+            | **Frontend** | ${frontendResult === 'success' ? '✅ Passing' : '❌ Failed'} |
+            | **Backend** | ${backendResult === 'success' ? '✅ Passing' : '❌ Failed'} |
+
+            [View Full Logs](${run_url})`;
 
             await github.rest.issues.createComment({
               owner,
