@@ -5,8 +5,7 @@ from enum import Enum
 from typing import List, Optional
 
 from backend.database import get_session
-from backend.models import (ManualRule, Preference, ProcessedEmail,
-                            ProcessingRun)
+from backend.models import (ManualRule, ProcessedEmail, ProcessingRun)
 from backend.security import decrypt_content
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
