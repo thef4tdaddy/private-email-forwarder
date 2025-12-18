@@ -1,7 +1,7 @@
 import fnmatch
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 import os
 
 from backend.models import ManualRule, ProcessedEmail
