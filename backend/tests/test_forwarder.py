@@ -353,7 +353,7 @@ class TestEmailForwarder:
         """Test that uses fixture after previous test left a template"""
         # This test relies on the previous test leaving a template in the DB
         # The clean_email_template fixture will clean it up before this test runs
-        # This ensures lines 22-24 in the fixture are executed
+        # This ensures lines 23-24 in the fixture are executed
         mock_server = Mock()
         mock_smtp.return_value.__enter__.return_value = mock_server
 
