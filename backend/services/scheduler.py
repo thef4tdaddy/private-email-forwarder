@@ -1,8 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 
-from apscheduler.schedulers.background import \
-    BackgroundScheduler  # type: ignore
+from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore
 from backend.database import engine
 from backend.models import ProcessedEmail, ProcessingRun
 from backend.security import encrypt_content
@@ -192,8 +191,7 @@ def process_emails():
                     category = ReceiptDetector.categorize_receipt(email_data)
 
                     # Shadow Mode Testing (Learning)
-                    from backend.services.learning_service import \
-                        LearningService
+                    from backend.services.learning_service import LearningService
 
                     LearningService.run_shadow_mode(session, email_data)
 
@@ -242,6 +240,13 @@ def process_emails():
                     )
                     traceback.print_exc()
                     session.rollback()  # Ensure session isn't broken for next email
+                    # Mark that an error occurred during this run and update error message
+                    error_occurred = True
+                    subject = email_data.get("subject", "unknown")
+                    if error_msg:
+                        error_msg += f"; error processing email '{subject}'"
+                    else:
+                        error_msg = f"Error processing email '{subject}'"
                     # Continue to next email
 
             # Update the processing run with final counts
