@@ -507,12 +507,21 @@ class ReceiptDetector:
 
     @staticmethod
     def has_strong_receipt_indicators(subject: str, body: str) -> bool:
+        # Definitive phrases that don't need supporting evidence
+        definitive_patterns = [
+            r"payment\s+receipt",
+            r"order\s+confirmation",
+            r"purchase\s+confirmation",
+            r"receipt\s+for\s+your\s+payment",
+        ]
+
+        subject_lower = subject.lower()
+        if any(re.search(p, subject_lower) for p in definitive_patterns):
+            return True
+
         strong_keywords = [
             "receipt",
             "invoice",
-            "order confirmation",
-            "payment confirmation",
-            "purchase confirmation",
             "order complete",
             "payment received",
             "order summary",
