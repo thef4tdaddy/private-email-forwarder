@@ -114,11 +114,48 @@ class EmailService:
         imap_port=993,
         search_criterion=None,
     ):
+        """
+        Fetch recent emails from an IMAP server.
 
+        Args:
+            username: Email address to authenticate with
+            password: Password for authentication
+            imap_server: IMAP server hostname (default: "imap.gmail.com")
+            imap_port: IMAP server port (default: 993)
+            search_criterion: Optional custom IMAP search criterion string.
+                            If None, defaults to emails from the last N days,
+                            where N is set by EMAIL_LOOKBACK_DAYS env var (default: 3)
+
+        Returns:
+            List of email dictionaries containing message_id, subject, body,
+            html_body, from, date, reply_to, and account_email fields.
+            Returns empty list on error or if no credentials provided.
+
+        Environment Variables:
+            EMAIL_LOOKBACK_DAYS: Number of days to look back for emails (default: 3).
+                               Must be a positive integer.
+            EMAIL_BATCH_LIMIT: Maximum number of emails to fetch (default: 100).
+                             Prevents timeouts with large inboxes.
+        """
         print("🔌 Connecting to IMAP server...")
 
-        # Use configurable lookback days
-        lookback_days = int(os.environ.get("EMAIL_LOOKBACK_DAYS", "3"))
+        # Use configurable lookback days with validation
+        default_lookback_days = 3
+        raw_lookback = os.environ.get("EMAIL_LOOKBACK_DAYS")
+        try:
+            if raw_lookback is None:
+                lookback_days = default_lookback_days
+            else:
+                lookback_days = int(raw_lookback)
+                if lookback_days <= 0:
+                    raise ValueError("EMAIL_LOOKBACK_DAYS must be a positive integer")
+        except (ValueError, TypeError):
+            logging.warning(
+                "Invalid EMAIL_LOOKBACK_DAYS value %r; falling back to %d",
+                raw_lookback,
+                default_lookback_days,
+            )
+            lookback_days = default_lookback_days
 
         if not username or not password:
             print("❌ IMAP Credentials missing")
@@ -145,9 +182,25 @@ class EmailService:
                 return []
 
             email_ids = messages[0].split()
-            print(
-                f"📬 Recent emails found (last {lookback_days} days): {len(email_ids)}"
-            )
+            total_emails = len(email_ids)
+
+            # Apply batch limit to prevent timeouts
+            batch_limit = int(os.environ.get("EMAIL_BATCH_LIMIT", "100"))
+            if total_emails > batch_limit:
+                print(
+                    f"⚠️ Limiting fetched emails to the last {batch_limit} out of {total_emails} "
+                    f"matching messages to avoid timeouts."
+                )
+                # Keep only the most recent emails (higher IDs are newer in IMAP)
+                email_ids = email_ids[-batch_limit:]
+
+            # Log appropriately based on whether custom criterion was used
+            if search_criterion is None:
+                print(
+                    f"📬 Recent emails found (last {lookback_days} days): {len(email_ids)}"
+                )
+            else:
+                print(f"📬 Emails matching search criterion: {len(email_ids)}")
 
             fetched_emails = []
 
@@ -205,7 +258,9 @@ class EmailService:
                                         else:
                                             body = decoded
                                 except Exception:
-                                    pass
+                                    logging.exception(
+                                        "Failed to decode non-multipart email payload"
+                                    )
 
                             # Fallback: If no plain text body, use HTML strip or just raw HTML (simplified)
                             if not body and html_body:
