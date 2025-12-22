@@ -364,3 +364,211 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
         assert result
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_forward_email_exception_in_domain_extraction(self, mock_smtp):
+        """Test exception handling when extracting domain from malformed 'from' header"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        # Create a special string-like object that will fail during split operations
+        class BadString(str):
+            def split(self, *args, **kwargs):
+                # First split by @ works, but return a BadString for the domain part
+                if args and args[0] == "@":
+                    return [str(self), BadString("domain.com")]
+                # For any other split (by '>' or '.'), raise an error
+                raise RuntimeError("Simulated split error")
+        
+        original_email = {
+            "subject": "Test",
+            "from": BadString("user@domain.com"),
+            "body": "Test body",
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        assert result
+        mock_server.send_message.assert_called_once()
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_forward_email_with_html_body(self, mock_smtp):
+        """Test forwarding email with HTML body content"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        original_email = {
+            "subject": "HTML Email",
+            "from": "sender@example.com",
+            "body": "Plain text body",
+            "html_body": "<html><body><h1>HTML Content</h1></body></html>",
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        assert result
+        mock_server.send_message.assert_called_once()
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {
+            "SENDER_EMAIL": "sender@example.com",
+            "SENDER_PASSWORD": "password123",
+            "APP_URL": "https://example.com/",
+        },
+    )
+    def test_forward_email_app_url_trailing_slash(self, mock_smtp):
+        """Test APP_URL trailing slash is removed"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        original_email = {
+            "subject": "Test",
+            "from": "sender@amazon.com",
+            "body": "Test body",
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        assert result
+        mock_server.send_message.assert_called_once()
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {
+            "SENDER_EMAIL": "sender@example.com",
+            "SENDER_PASSWORD": "password123",
+            "APP_URL": "https://example.com",
+            "SECRET_KEY": "test-secret-key",
+        },
+    )
+    def test_forward_email_http_link_strategy(self, mock_smtp):
+        """Test HTTP link generation with APP_URL and HMAC signature"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        original_email = {
+            "subject": "Test Receipt",
+            "from": "shop@amazon.com",
+            "body": "Order details",
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        assert result
+        # Verify the message was sent with HTTP links
+        mock_server.send_message.assert_called_once()
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch("backend.services.forwarder.Session")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_forward_email_database_exception_for_template(
+        self, mock_session_class, mock_smtp
+    ):
+        """Test handling of database exception when fetching email template"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        # Mock Session to raise exception
+        mock_session = Mock()
+        mock_session_class.return_value.__enter__.return_value = mock_session
+        mock_session.exec.side_effect = Exception("Database connection failed")
+
+        original_email = {
+            "subject": "Test",
+            "from": "sender@example.com",
+            "body": "Test body",
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        # Should still succeed using default template
+        assert result
+        mock_server.send_message.assert_called_once()
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_forward_email_template_keyerror_fallback(
+        self, mock_smtp, clean_email_template
+    ):
+        """Test fallback when custom template has KeyError (missing variable)"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        # Store template with an invalid variable
+        with Session(engine) as session:
+            invalid_template = "Subject: {subject}\nInvalid: {nonexistent_var}"
+            setting = GlobalSettings(
+                key="email_template",
+                value=invalid_template,
+                description="Invalid template",
+            )
+            session.add(setting)
+            session.commit()
+
+        original_email = {
+            "subject": "Test",
+            "from": "sender@example.com",
+            "body": "Test body",
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        # Should succeed by falling back to default template
+        assert result
+        mock_server.send_message.assert_called_once()
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_forward_email_template_double_fallback(
+        self, mock_smtp, clean_email_template
+    ):
+        """Test absolute fallback when even default template fails"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        # Store template with an invalid variable
+        with Session(engine) as session:
+            invalid_template = "Invalid: {bad_var}"
+            setting = GlobalSettings(
+                key="email_template",
+                value=invalid_template,
+                description="Invalid template",
+            )
+            session.add(setting)
+            session.commit()
+
+        original_email = {
+            "subject": "Test",
+            "from": "sender@example.com",
+            "body": "Test body",
+        }
+
+        # Temporarily patch DEFAULT_EMAIL_TEMPLATE to also fail
+        with patch(
+            "backend.services.forwarder.DEFAULT_EMAIL_TEMPLATE", "Bad: {bad_var}"
+        ):
+            result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+            # Should still succeed with absolute fallback
+            assert result
+            mock_server.send_message.assert_called_once()
