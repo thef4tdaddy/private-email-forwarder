@@ -184,7 +184,7 @@ def process_emails():
                         )
                         session.add(processed)
                         session.commit()
-                        print(f"❌ Failed to send confirmation: {status}")
+                        print(f"✅ Command processed with status: {status}")
                         continue
 
                     # Detect (passing session for manual rules/preferences)
