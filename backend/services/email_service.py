@@ -115,7 +115,7 @@ class EmailService:
         search_criterion=None,
     ):
 
-        print(f"🔌 Connecting to {imap_server}...")
+        print("🔌 Connecting to IMAP server...")
 
         # Use configurable lookback days
         lookback_days = int(os.environ.get("EMAIL_LOOKBACK_DAYS", "3"))
