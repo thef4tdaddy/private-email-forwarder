@@ -317,10 +317,11 @@ class TestEmailForwarder:
         os.environ,
         {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
     )
-    def test_forward_email_leaves_template_in_db(self, mock_smtp):
+    def test_zzz_forward_email_leaves_template_in_db(self, mock_smtp):
         """Test that creates a template without cleaning it up"""
-        # This test intentionally leaves a template in the DB to trigger
-        # the cleanup code in the next test that uses clean_email_template
+        # NOTE: This test is prefixed with "zzz_" to ensure it runs late in the test order.
+        # It intentionally leaves a template in the DB to set up the precondition
+        # for testing the fixture's cleanup logic.
         mock_server = Mock()
         mock_smtp.return_value.__enter__.return_value = mock_server
 
@@ -347,13 +348,14 @@ class TestEmailForwarder:
         os.environ,
         {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
     )
-    def test_forward_email_with_fixture_cleanup(
+    def test_zzz_forward_email_with_fixture_cleanup(
         self, mock_smtp, clean_email_template
     ):
         """Test that uses fixture after previous test left a template"""
-        # This test relies on the previous test leaving a template in the DB
-        # The clean_email_template fixture will clean it up before this test runs
-        # This ensures lines 23-24 in the fixture are executed
+        # NOTE: This test is prefixed with "zzz_" to ensure it runs after
+        # test_zzz_forward_email_leaves_template_in_db.
+        # The clean_email_template fixture will clean up the leftover template,
+        # ensuring lines 23-24 in the fixture are executed.
         mock_server = Mock()
         mock_smtp.return_value.__enter__.return_value = mock_server
 
