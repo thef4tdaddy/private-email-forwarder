@@ -371,8 +371,9 @@ def test_process_emails_run_creation_error(mock_session_class, mock_engine_patch
     # Call process_emails - should return early without crashing
     process_emails()
 
-    # Verify session was attempted to be used
-    assert mock_session.add.called or mock_session.commit.called
+    # Verify session methods were attempted
+    mock_session.add.assert_called()
+    mock_session.commit.assert_called()
 
 
 @patch.dict(
@@ -754,8 +755,9 @@ def test_start_scheduler_adds_cleanup_job(mock_scheduler):
 
     # Verify the cleanup job was added with 1 hour interval
     calls = mock_scheduler.add_job.call_args_list
-    cleanup_call = [c for c in calls if c[0][0].__name__ == "cleanup_expired_emails"][0]
-    assert cleanup_call[1]["hours"] == 1
+    cleanup_calls = [c for c in calls if c[0][0].__name__ == "cleanup_expired_emails"]
+    assert len(cleanup_calls) == 1
+    assert cleanup_calls[0][1]["hours"] == 1
 
 
 def test_cleanup_expired_emails(engine):
@@ -780,11 +782,6 @@ def test_cleanup_expired_emails(engine):
                 encrypted_body="encrypted_body_data",
                 encrypted_html="encrypted_html_data",
             )
-            session.add(expired)
-            session.commit()
-            session.refresh(expired)
-            
-        with Session(engine) as session:
             # Non-expired email
             non_expired = ProcessedEmail(
                 email_id="active1",
@@ -798,8 +795,10 @@ def test_cleanup_expired_emails(engine):
                 encrypted_body="encrypted_body_data",
                 encrypted_html="encrypted_html_data",
             )
+            session.add(expired)
             session.add(non_expired)
             session.commit()
+            session.refresh(expired)
             session.refresh(non_expired)
 
         # Run cleanup
@@ -870,7 +869,6 @@ def test_cleanup_expired_emails_error_handling(mock_engine):
     with patch("backend.services.scheduler.Session") as mock_session_class:
         mock_session = MagicMock()
         mock_session.__enter__ = MagicMock(side_effect=Exception("Database error"))
-        mock_session.__exit__ = MagicMock(return_value=False)
         mock_session_class.return_value = mock_session
 
         # Should not crash
