@@ -16,9 +16,9 @@ def run_scan_wrapper(days: int):
     with Session(engine) as session:
         try:
             count = LearningService.scan_history(session, days)
-            print(f"✅ Background Scan Complete. Found {count} new candidates.")
+            logging.info(f"✅ Background Scan Complete. Found {count} new candidates.")
         except Exception as e:
-            print(f"❌ Background Scan Failed: {e}")
+            logging.error(f"❌ Background Scan Failed: {e}", exc_info=True)
 
 
 @router.post("/scan")
