@@ -267,7 +267,7 @@ class LearningService:
                                 total_new_candidates += 1
 
             except Exception as e:
-                print(f"❌ Error scanning account {user}: {e}")
+                print(f"❌ Error scanning account {account_label}: {e}")
 
         session.commit()
         return total_new_candidates
