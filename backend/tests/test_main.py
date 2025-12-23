@@ -108,7 +108,7 @@ def test_auth_middleware_unauthenticated_with_password():
             del os.environ["DASHBOARD_PASSWORD"]
 
 
-def test_auth_middleware_authenticated(monkeypatch):
+def test_auth_middleware_authenticated():
     """Test auth middleware when authenticated (line 61)"""
     from backend.main import app
 
