@@ -375,7 +375,7 @@ class TestEmailForwarder:
         mock_server = Mock()
         mock_smtp.return_value.__enter__.return_value = mock_server
 
-        # Create a special string-like object that will fail during split operations
+        # Create a string-like object that succeeds for '@' split but fails for subsequent splits
         class BadString(str):
             def split(self, *args, **kwargs):
                 # First split by @ works, but return a BadString for the domain part
@@ -416,6 +416,18 @@ class TestEmailForwarder:
 
         assert result
         mock_server.send_message.assert_called_once()
+        
+        # Verify the HTML content was used in the message
+        sent_message = mock_server.send_message.call_args[0][0]
+        # Get the HTML part from the multipart message
+        html_part = None
+        for part in sent_message.walk():
+            if part.get_content_type() == "text/html":
+                html_part = part.get_payload(decode=True).decode()
+                break
+        
+        assert html_part is not None
+        assert "<h1>HTML Content</h1>" in html_part
 
     @patch("backend.services.forwarder.smtplib.SMTP")
     @patch.dict(
@@ -441,6 +453,20 @@ class TestEmailForwarder:
 
         assert result
         mock_server.send_message.assert_called_once()
+        
+        # Verify the normalized URL (without trailing slash) was used in links
+        sent_message = mock_server.send_message.call_args[0][0]
+        # Get the HTML part from the multipart message
+        html_part = None
+        for part in sent_message.walk():
+            if part.get_content_type() == "text/html":
+                html_part = part.get_payload(decode=True).decode()
+                break
+        
+        assert html_part is not None
+        # The URL should not have a double slash before /api
+        assert "https://example.com/api/actions/quick" in html_part
+        assert "https://example.com//api" not in html_part
 
     @patch("backend.services.forwarder.smtplib.SMTP")
     @patch.dict(
@@ -466,8 +492,24 @@ class TestEmailForwarder:
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
         assert result
-        # Verify the message was sent with HTTP links
         mock_server.send_message.assert_called_once()
+        
+        # Verify the message contains HTTP links with HMAC signatures
+        sent_message = mock_server.send_message.call_args[0][0]
+        # Get the HTML part from the multipart message
+        html_part = None
+        for part in sent_message.walk():
+            if part.get_content_type() == "text/html":
+                html_part = part.get_payload(decode=True).decode()
+                break
+        
+        assert html_part is not None
+        # Check for HTTP link format with required parameters
+        assert "https://example.com/api/actions/quick?" in html_part
+        assert "cmd=" in html_part
+        assert "arg=" in html_part
+        assert "ts=" in html_part
+        assert "sig=" in html_part
 
     @patch("backend.services.forwarder.smtplib.SMTP")
     @patch("backend.services.forwarder.Session")
