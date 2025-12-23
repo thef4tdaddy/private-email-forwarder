@@ -49,19 +49,17 @@ def debug_emails():
                 subject = email.get("subject", "No Subject")
                 sender = email.get("from", "No Sender")
                 body = email.get("body", "")
-                
-                print(f"\n   ---------------------------------------------------")
-                print(f"   Subject: {subject}")
-                print(f"   From:    {sender}")
-                
+
+                # Deliberately avoid logging full subject/sender to prevent leaking sensitive data
                 is_promo = ReceiptDetector.is_promotional_email(subject, body, sender)
                 is_receipt = ReceiptDetector.is_receipt(email)
                 category = ReceiptDetector.categorize_receipt(email)
-                
+
+                print(f"\n   ---------------------------------------------------")
                 print(f"   > Is Promotional? {is_promo}")
                 print(f"   > Is Receipt?     {is_receipt}")
                 print(f"   > Category:       {category}")
-                
+
                 if is_promo and not is_receipt:
                     print("   🔴 BLOCKED by Promotional Filter")
                 elif is_receipt:
