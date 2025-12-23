@@ -77,10 +77,19 @@ class ReceiptDetector:
             return True
 
         # STEP 1: HARD EXCLUDE spam/promotional emails
-        # (Disabled to allow receipts that look like promos, e.g. Xbox renewals)
-        # if ReceiptDetector.is_promotional_email(subject, body, sender):
-        #    print(f"🚫 Excluded promotional email: {subject}")
-        #    return False
+        # Use an allowlist for known receipt-like promotional emails (e.g. subscription renewals)
+        promo_allowlist_patterns = [
+            "xbox",
+            "game pass",
+            "subscription renewal",
+            "renewal receipt",
+        ]
+        if ReceiptDetector.is_promotional_email(subject, body, sender) and not any(
+            pattern in subject or pattern in body or pattern in sender
+            for pattern in promo_allowlist_patterns
+        ):
+            print(f"🚫 Excluded promotional email: {subject}")
+            return False
 
         # STEP 1.5: EXCLUDE shipping notifications (not receipts)
         if ReceiptDetector.is_shipping_notification(subject, body, sender):
