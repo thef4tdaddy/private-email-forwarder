@@ -325,7 +325,7 @@ def test_redact_email_invalid():
     assert redact_email(123) == "[REDACTED]"
 
 
-@patch.dict(os.environ, {}, clear=True)
+@patch.dict(os.environ, {"SECRET_KEY": ""})
 @patch("backend.services.scheduler.engine")
 def test_process_emails_no_secret_key(mock_engine_patch, engine):
     """Test that process_emails returns early when SECRET_KEY is not set"""
@@ -477,7 +477,11 @@ def test_process_emails_no_wife_email(mock_fetch, mock_engine_patch, engine):
 @patch("backend.services.scheduler.EmailForwarder.forward_email")
 @patch("backend.services.scheduler.ReceiptDetector.is_receipt")
 @patch("backend.services.scheduler.ReceiptDetector.categorize_receipt")
+@patch("backend.services.learning_service.LearningService.run_shadow_mode")
+@patch("backend.services.learning_service.LearningService.auto_promote_rules")
 def test_process_emails_duplicate_detection(
+    mock_auto_promote,
+    mock_shadow_mode,
     mock_categorize,
     mock_is_receipt,
     mock_forward,
@@ -538,7 +542,11 @@ def test_process_emails_duplicate_detection(
 @patch("backend.services.scheduler.EmailService.fetch_recent_emails")
 @patch("backend.services.command_service.CommandService.is_command_email")
 @patch("backend.services.command_service.CommandService.process_command")
+@patch("backend.services.learning_service.LearningService.run_shadow_mode")
+@patch("backend.services.learning_service.LearningService.auto_promote_rules")
 def test_process_emails_command_processing(
+    mock_auto_promote,
+    mock_shadow_mode,
     mock_process_command,
     mock_is_command,
     mock_fetch,
@@ -594,7 +602,11 @@ def test_process_emails_command_processing(
 @patch("backend.services.scheduler.EmailService.fetch_recent_emails")
 @patch("backend.services.command_service.CommandService.is_command_email")
 @patch("backend.services.command_service.CommandService.process_command")
+@patch("backend.services.learning_service.LearningService.run_shadow_mode")
+@patch("backend.services.learning_service.LearningService.auto_promote_rules")
 def test_process_emails_command_no_action(
+    mock_auto_promote,
+    mock_shadow_mode,
     mock_process_command,
     mock_is_command,
     mock_fetch,
@@ -651,7 +663,11 @@ def test_process_emails_command_no_action(
 @patch("backend.services.scheduler.EmailForwarder.forward_email")
 @patch("backend.services.scheduler.ReceiptDetector.is_receipt")
 @patch("backend.services.scheduler.ReceiptDetector.categorize_receipt")
+@patch("backend.services.learning_service.LearningService.run_shadow_mode")
+@patch("backend.services.learning_service.LearningService.auto_promote_rules")
 def test_process_emails_individual_error_handling(
+    mock_auto_promote,
+    mock_shadow_mode,
     mock_categorize,
     mock_is_receipt,
     mock_forward,
@@ -757,7 +773,7 @@ def test_start_scheduler_adds_cleanup_job(mock_scheduler):
     calls = mock_scheduler.add_job.call_args_list
     cleanup_calls = [c for c in calls if c[0][0].__name__ == "cleanup_expired_emails"]
     assert len(cleanup_calls) == 1
-    assert cleanup_calls[0][1]["hours"] == 1
+    assert cleanup_calls[0].kwargs["hours"] == 1
 
 
 def test_cleanup_expired_emails(engine):
@@ -899,7 +915,11 @@ def test_stop_scheduler(mock_scheduler):
 @patch("backend.services.scheduler.EmailForwarder.forward_email")
 @patch("backend.services.scheduler.ReceiptDetector.is_receipt")
 @patch("backend.services.scheduler.ReceiptDetector.categorize_receipt")
+@patch("backend.services.learning_service.LearningService.run_shadow_mode")
+@patch("backend.services.learning_service.LearningService.auto_promote_rules")
 def test_process_emails_multiple_errors(
+    mock_auto_promote,
+    mock_shadow_mode,
     mock_categorize,
     mock_is_receipt,
     mock_forward,
