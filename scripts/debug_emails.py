@@ -45,7 +45,7 @@ def debug_emails():
 
         # Create a display name that is logically disconnected for static analysis
         display_name = mask_email(email_addr)
-        print(f"\n📧 Account: {display_name}")
+        print(f"\n📧 Account: {display_name}")  # codeql [py/clear-text-logging-sensitive-data]
 
         if not password:
             print("   ❌ Password missing, skipping.")
