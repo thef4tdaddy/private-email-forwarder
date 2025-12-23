@@ -1,5 +1,4 @@
 import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
 import path from 'path';
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';

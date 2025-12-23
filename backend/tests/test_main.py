@@ -93,9 +93,7 @@ def test_auth_middleware_authenticated(monkeypatch):
 
     client = TestClient(app)
     # First, authenticate via login endpoint
-    response = client.post(
-        "/api/auth/login", json={"password": "test_password"}
-    )
+    response = client.post("/api/auth/login", json={"password": "test_password"})
     assert response.status_code == 200
 
     # Now access protected route - should work
@@ -107,32 +105,31 @@ def test_auth_middleware_authenticated(monkeypatch):
 
 def test_frontend_serving_current_state():
     """Test frontend serving based on current repository state.
-    
+
     Note: This test checks the current state of the frontend/dist directory.
     The behavior differs based on whether dist exists:
     - If dist exists: Tests SPA catch-all and static file serving (lines 87-100)
     - If dist doesn't exist: Tests fallback message (line 108)
-    
+
     Module reloading is avoided to maintain test isolation.
     """
     from backend.main import app, frontend_dist_path
-    import os
-    
+
     client = TestClient(app)
-    
+
     # Check if dist currently exists
     dist_exists = os.path.exists(frontend_dist_path)
-    
+
     # Test root endpoint
     response = client.get("/")
     assert response.status_code == 200
-    
+
     if dist_exists:
         # When dist exists, should serve index.html or SPA routes
         # Test SPA catch-all route (lines 93-100)
         response = client.get("/some-spa-route")
         assert response.status_code in [200, 404]  # Depends on file existence
-        
+
         # Test that api/ paths in catch-all return error (line 97)
         response = client.get("/api/unknown-endpoint")
         if response.status_code == 200:
@@ -150,33 +147,32 @@ def test_frontend_serving_current_state():
 @pytest.mark.parametrize("dist_should_exist", [True, False])
 def test_frontend_dist_behavior(dist_should_exist, tmp_path):
     """Test frontend serving with and without dist directory.
-    
+
     NOTE: This test uses module reloading to test different states of
     frontend/dist at module import time. This is necessary because
     backend.main.py checks os.path.exists(frontend_dist_path) at module
     level, not at runtime. Proper refactoring to support dependency
     injection would be needed to avoid module reloading, but that's
     out of scope for test additions.
-    
+
     Args:
         dist_should_exist: Whether to set up the dist directory
         tmp_path: Pytest fixture for temporary directory
     """
     import sys
-    import importlib
-    
+
     # Clean up any previous imports
-    if 'backend.main' in sys.modules:
-        del sys.modules['backend.main']
-    
+    if "backend.main" in sys.modules:
+        del sys.modules["backend.main"]
+
     # Determine repo path
     repo_root = Path(__file__).parent.parent.parent
     dist_path = repo_root / "frontend" / "dist"
-    
+
     # Set up dist directory state
     dist_existed_before = dist_path.exists()
     needs_cleanup = False
-    
+
     try:
         if dist_should_exist and not dist_existed_before:
             # Create minimal dist structure for testing
@@ -187,16 +183,17 @@ def test_frontend_dist_behavior(dist_should_exist, tmp_path):
         elif not dist_should_exist and dist_existed_before:
             # Can't remove existing dist - skip this scenario
             pytest.skip("Cannot test without dist when dist already exists in repo")
-        
+
         # Reimport to pick up the current dist state
         from backend.main import app
+
         client = TestClient(app)
-        
+
         if dist_should_exist:
             # Test SPA serving (lines 87-100)
             response = client.get("/some-spa-route")
             assert response.status_code == 200
-            
+
             # Test API error in catch-all (line 97)
             response = client.get("/api/unknown-endpoint")
             assert response.status_code == 200
@@ -213,8 +210,9 @@ def test_frontend_dist_behavior(dist_should_exist, tmp_path):
         # Clean up
         if needs_cleanup and dist_path.exists():
             import shutil
+
             shutil.rmtree(dist_path)
-        
+
         # Always clean up module to avoid affecting other tests
-        if 'backend.main' in sys.modules:
-            del sys.modules['backend.main']
+        if "backend.main" in sys.modules:
+            del sys.modules["backend.main"]

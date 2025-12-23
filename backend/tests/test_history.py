@@ -740,9 +740,7 @@ class TestHistoryReprocess:
             assert exc_info.value.status_code == 400
             assert "Credentials missing" in exc_info.value.detail
 
-    def test_reprocess_email_imap_fallback_email_not_found(
-        self, session: Session
-    ):
+    def test_reprocess_email_imap_fallback_email_not_found(self, session: Session):
         """Test reprocessing email when IMAP fetch returns None"""
         now = datetime.now(timezone.utc)
         email = ProcessedEmail(

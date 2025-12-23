@@ -1,7 +1,4 @@
-import os
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from backend.migration_utils import run_migrations
 
@@ -99,9 +96,7 @@ class TestMigrationUtils:
 
         # Verify stamp was called for legacy database (lines 34-41)
         mock_command.stamp.assert_called_once_with(mock_alembic_cfg, "head")
-        assert (
-            "Detected existing tables without Alembic history" in captured.out
-        )
+        assert "Detected existing tables without Alembic history" in captured.out
 
         # Verify upgrade was also called after stamping
         mock_command.upgrade.assert_called_once_with(mock_alembic_cfg, "head")

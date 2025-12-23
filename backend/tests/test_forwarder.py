@@ -342,7 +342,7 @@ class TestEmailForwarder:
         # This approach removes the ordering dependency - the fixtures are explicitly
         # ordered by pytest (preexisting_template_for_cleanup_test runs before clean_email_template
         # because clean_email_template is listed after it in the parameter list).
-        
+
         mock_server = Mock()
         mock_smtp.return_value.__enter__.return_value = mock_server
 
@@ -351,7 +351,9 @@ class TestEmailForwarder:
             setting = session.exec(
                 select(GlobalSettings).where(GlobalSettings.key == "email_template")
             ).first()
-            assert setting is None, "Fixture should have cleaned up the pre-existing template"
+            assert (
+                setting is None
+            ), "Fixture should have cleaned up the pre-existing template"
 
         # Perform a normal email forwarding operation
         original_email = {

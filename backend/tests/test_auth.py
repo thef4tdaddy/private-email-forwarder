@@ -45,7 +45,7 @@ def test_login_no_password_configured(monkeypatch):
 def test_logout(monkeypatch):
     monkeypatch.setenv("DASHBOARD_PASSWORD", "testpass")
     fresh_client = TestClient(app)
-    
+
     # Login first
     fresh_client.post("/api/auth/login", json={"password": "testpass"})
 
