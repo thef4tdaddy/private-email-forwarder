@@ -125,12 +125,18 @@ class EmailService:
             imap_port: IMAP server port (default: 993)
             search_criterion: Optional custom IMAP search criterion string.
             lookback_days: Optional integer number of days to look back.
-                         If None, checks EMAIL_LOOKBACK_DAYS env var (default: 3).
+                          If None, defaults to emails from the last N days,
+                          where N is set by EMAIL_LOOKBACK_DAYS env var (default: 3)
 
         Returns:
             List of email dictionaries containing message_id, subject, body,
             html_body, from, date, reply_to, and account_email fields.
             Returns empty list on error or if no credentials provided.
+        Environment Variables:
+            EMAIL_LOOKBACK_DAYS: Number of days to look back for emails (default: 3).
+                               Must be a positive integer.
+            EMAIL_BATCH_LIMIT: Maximum number of emails to fetch (default: 100).
+                             Prevents timeouts with large inboxes.
         """
         print("🔌 Connecting to IMAP server...")
 
@@ -295,7 +301,6 @@ class EmailService:
                                     "account_email": username,  # Fixed: was email_user
                                 }
                             )
-
                 except Exception as e:
                     print(f"❌ Error fetching email {e_id}: {e}")
                     continue
