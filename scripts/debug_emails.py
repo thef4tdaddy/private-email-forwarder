@@ -37,15 +37,14 @@ def debug_emails():
         print("❌ No accounts found. Check your .env file or EMAIL_ACCOUNTS variable.")
         return
 
-    for acc in accounts:
+    for i, acc in enumerate(accounts, 1):
         # Extract variables
         email_addr = acc.get("email")
         password = acc.get("password")
         server = acc.get("imap_server", "imap.gmail.com")
 
-        # Create a display name that is logically disconnected for static analysis
-        display_name = mask_email(email_addr)
-        print(f"\n📧 Account: {display_name}")  # codeql [py/clear-text-logging-sensitive-data]
+        # Log generic account info to avoid PII/sensitive data leaks
+        print(f"\n📧 Processing Account #{i} (Server: {server})")
 
         if not password:
             print("   ❌ Password missing, skipping.")
