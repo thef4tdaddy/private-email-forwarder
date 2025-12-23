@@ -38,7 +38,7 @@ def debug_emails():
             continue
 
         try:
-            print(f"   🔌 Connecting to {server}...")
+            print("   🔌 Connecting to mail server...")
             emails = EmailService.fetch_recent_emails(user, password, server)
             print(f"   📬 Fetched {len(emails)} emails.")
 
