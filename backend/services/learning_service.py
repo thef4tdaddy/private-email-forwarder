@@ -267,7 +267,8 @@ class LearningService:
                                 total_new_candidates += 1
 
             except Exception as e:
-                print(f"❌ Error scanning account {account_label}: {e}")
+                # Avoid logging potentially sensitive account identifiers; log only generic error info
+                print(f"❌ Error during retroactive scan: {type(e).__name__}: {e}")
 
         session.commit()
         return total_new_candidates
