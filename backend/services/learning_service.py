@@ -155,6 +155,12 @@ class LearningService:
             user = acct["email"]
             pwd = acct["password"]
 
+            # Create a non-sensitive label for logging (avoid logging full email or tainted structures)
+            if isinstance(user, str) and "@" in user:
+                account_label = user.split("@", 1)[1]  # log only the domain part
+            else:
+                account_label = "configured-account"
+
             # Use EmailService logic but force the lookback
             # We need to act like fetch_recent_emails but strictly for this window
             # Implementation re-use: we can instantiate EmailService or use a specialized fetch
@@ -194,7 +200,7 @@ class LearningService:
                     lookback_days=days,
                 )
 
-                print(f"   > Account {user}: Fetched {len(fetched)} emails.")
+                print(f"   > Account {account_label}: Fetched {len(fetched)} emails.")
 
                 for email_data in fetched:
                     msg_id = email_data.get("message_id")
