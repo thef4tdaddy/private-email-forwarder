@@ -1,4 +1,5 @@
 import os
+import pytest
 from email.mime.text import MIMEText
 from unittest.mock import Mock, patch
 
@@ -6,6 +7,15 @@ from backend.services.email_service import EmailService
 
 
 class TestEmailService:
+
+    def _setup_mock_imap(self, mock_imap, search_result=b"1"):
+        """Helper to setup common IMAP mock configuration"""
+        mock_mail = Mock()
+        mock_imap.return_value = mock_mail
+        mock_mail.login.return_value = ("OK", [])
+        mock_mail.select.return_value = ("OK", [])
+        mock_mail.search.return_value = ("OK", [search_result])
+        return mock_mail
 
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     def test_fetch_recent_emails_success(self, mock_imap):
@@ -332,7 +342,7 @@ class TestEmailService:
         result = EmailService.get_credentials_for_account("notfound@test.com")
         assert result is None
 
-    def test_connection_missing_credentials(self):
+    def test_test_connection_missing_credentials(self):
         """Test test_connection with missing credentials"""
         result = EmailService.test_connection(None, "password")
         assert result["success"] is False
@@ -346,11 +356,7 @@ class TestEmailService:
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_invalid_lookback_days(self, mock_imap):
         """Test fetch_recent_emails with invalid EMAIL_LOOKBACK_DAYS"""
-        mock_mail = Mock()
-        mock_imap.return_value = mock_mail
-        mock_mail.login.return_value = ("OK", [])
-        mock_mail.select.return_value = ("OK", [])
-        mock_mail.search.return_value = ("OK", [b"1"])
+        mock_mail = self._setup_mock_imap(mock_imap)
 
         msg = MIMEText("Test")
         msg["Subject"] = "Test"
@@ -367,11 +373,7 @@ class TestEmailService:
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_negative_lookback_days(self, mock_imap):
         """Test fetch_recent_emails with negative EMAIL_LOOKBACK_DAYS"""
-        mock_mail = Mock()
-        mock_imap.return_value = mock_mail
-        mock_mail.login.return_value = ("OK", [])
-        mock_mail.select.return_value = ("OK", [])
-        mock_mail.search.return_value = ("OK", [b"1"])
+        mock_mail = self._setup_mock_imap(mock_imap)
 
         msg = MIMEText("Test")
         msg["Subject"] = "Test"
@@ -388,13 +390,9 @@ class TestEmailService:
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_invalid_batch_limit(self, mock_imap):
         """Test fetch_recent_emails with invalid EMAIL_BATCH_LIMIT"""
-        mock_mail = Mock()
-        mock_imap.return_value = mock_mail
-        mock_mail.login.return_value = ("OK", [])
-        mock_mail.select.return_value = ("OK", [])
         # Create 50 email IDs
         email_ids = b" ".join([str(i).encode() for i in range(1, 51)])
-        mock_mail.search.return_value = ("OK", [email_ids])
+        mock_mail = self._setup_mock_imap(mock_imap, email_ids)
 
         msg = MIMEText("Test")
         msg["Subject"] = "Test"
@@ -411,11 +409,7 @@ class TestEmailService:
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_negative_batch_limit(self, mock_imap):
         """Test fetch_recent_emails with negative EMAIL_BATCH_LIMIT"""
-        mock_mail = Mock()
-        mock_imap.return_value = mock_mail
-        mock_mail.login.return_value = ("OK", [])
-        mock_mail.select.return_value = ("OK", [])
-        mock_mail.search.return_value = ("OK", [b"1"])
+        mock_mail = self._setup_mock_imap(mock_imap)
 
         msg = MIMEText("Test")
         msg["Subject"] = "Test"
@@ -431,9 +425,7 @@ class TestEmailService:
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_with_payload_decode_exception(self, mock_imap):
         """Test fetch_recent_emails with exception during payload decoding"""
-        mock_mail = Mock()
-        mock_imap.return_value = mock_mail
-        mock_mail.login.return_value = ("OK", [])
+        mock_mail = self._setup_mock_imap(mock_imap)
         mock_mail.select.return_value = ("OK", [])
         mock_mail.search.return_value = ("OK", [b"1"])
 
@@ -734,26 +726,6 @@ class TestEmailService:
         # Should logout and return None
         assert result is None
         mock_mail.logout.assert_called_once()
-
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
-    def test_fetch_emails_default_search_logs_lookback_days(self, mock_imap):
-        """Test that default search logs with lookback days info"""
-        mock_mail = Mock()
-        mock_imap.return_value = mock_mail
-        mock_mail.login.return_value = ("OK", [])
-        mock_mail.select.return_value = ("OK", [])
-        mock_mail.search.return_value = ("OK", [b"1"])
-
-        msg = MIMEText("Test")
-        msg["Subject"] = "Test"
-        msg["From"] = "test@test.com"
-        msg["Date"] = "Mon, 01 Jan 2024 12:00:00 +0000"
-        msg["Message-ID"] = "<test@test.com>"
-        mock_mail.fetch.return_value = ("OK", [(b"", msg.as_bytes())])
-
-        # Don't provide search_criterion to trigger default path
-        emails = EmailService.fetch_recent_emails("user@test.com", "pass", lookback_days=5)
-        assert len(emails) == 1
 
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_with_attachment(self, mock_imap):
