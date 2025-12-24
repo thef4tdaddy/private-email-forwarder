@@ -787,8 +787,8 @@ def test_promotional_email_deals_patterns():
     assert ReceiptDetector.is_promotional_email(
         "Steam sale this weekend", "Don't miss out", "newsletter@gaming.com"
     )
-    # Test "bargain" pattern which is ONLY in deals_patterns (line 500)
-    # This should hit line 513 specifically
+    # Test "bargain" pattern which is ONLY in deals_patterns (not in earlier keyword lists)
+    # This ensures we test the final deals_patterns check
     assert ReceiptDetector.is_promotional_email(
         "Weekly notification", "Check out this bargain", "info@shop.com"
     )
@@ -812,7 +812,7 @@ def test_transactional_score_triggers_receipt():
         email.subject, email.body, email.sender
     )
     # Calculate score to verify it's >= 3
-    # Order # (2) + $amount (2) + transaction (1) + payment (1) = 6
+    # Transaction # (2) + $amount (2) + transaction keyword (1) + payment keyword (1) = 6
     score = ReceiptDetector.calculate_transactional_score(
         email.subject, email.body, email.sender
     )
