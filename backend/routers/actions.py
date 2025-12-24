@@ -341,6 +341,7 @@ A manual rule has been created to forward future emails from this sender."""
         "from": email.sender,  # We populate 'from' field in the forwarded email template usually
         "body": final_body,
         "account_email": email.account_email,
+        "date": email.received_at,  # format_email_date will handle datetime objects
     }
 
     try:

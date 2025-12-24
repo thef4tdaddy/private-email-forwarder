@@ -6,6 +6,7 @@ import urllib.parse
 from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
 from backend.constants import DEFAULT_EMAIL_TEMPLATE
@@ -13,6 +14,41 @@ from backend.database import engine
 from backend.models import GlobalSettings
 from backend.services.email_service import EmailService
 from sqlmodel import Session, select
+
+
+def format_email_date(date_input) -> str:
+    """
+    Format an email date for display in forwarded emails.
+
+    Args:
+        date_input: Can be either:
+            - A string in RFC 2822 format (from email headers)
+            - A datetime object (from database)
+            - None
+
+    Returns:
+        Formatted date string in the format "December 21, 2023 at 10:30 AM +0000"
+        Returns "Unknown" if date_input is None, or the raw string if parsing fails
+    """
+    if date_input is None:
+        return "Unknown"
+
+    try:
+        # If it's already a datetime object, use it directly
+        if isinstance(date_input, datetime):
+            dt = date_input
+        else:
+            # Parse the date string using email.utils which handles RFC 2822 format
+            dt = parsedate_to_datetime(date_input)
+
+        # Ensure datetime is timezone-aware; assume UTC if tzinfo is missing
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        # Format with numeric timezone offset which is more reliable than %Z
+        return dt.strftime("%B %d, %Y at %I:%M %p %z")
+    except Exception:
+        # If parsing fails, return the raw string if available, otherwise "Unknown"
+        return str(date_input) if date_input else "Unknown"
 
 
 class EmailForwarder:
@@ -71,6 +107,9 @@ class EmailForwarder:
                 simple_name = domain.split(".")[0].capitalize()
             except Exception:
                 pass
+
+        # Parse the received date from the email
+        received_date_str = format_email_date(original_email_data.get("date"))
 
         # Prepare content
         body_content = original_email_data.get("body", "")
@@ -153,6 +192,7 @@ class EmailForwarder:
                 action_type_text=action_type_text,
                 body=body_content_html,
                 subject=original_email_data.get("subject", ""),
+                received_date=received_date_str,
                 **{
                     "from": from_header
                 },  # 'from' is a keyword in python, so we pass it as dict
@@ -170,6 +210,7 @@ class EmailForwarder:
                     action_type_text=action_type_text,
                     body=body_content_html,
                     subject=original_email_data.get("subject", ""),
+                    received_date=received_date_str,
                     **{"from": from_header},
                 )
             except Exception:
