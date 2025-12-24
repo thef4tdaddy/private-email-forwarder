@@ -599,20 +599,40 @@ class TestEmailService:
         mock_mail.select.return_value = ("OK", [])
         mock_mail.search.return_value = ("OK", [b"1"])
 
-        # Create a message that will trigger exception during decode
+        # We want to deterministically trigger an exception when the service
+        # calls msg.get_payload(decode=True).decode(...).
         from email.message import Message
-        msg = Message()
-        msg["Subject"] = "Test"
-        msg["From"] = "test@test.com"
-        msg["Date"] = "Mon, 01 Jan 2024 12:00:00 +0000"
-        msg["Message-ID"] = "<test@test.com>"
-        msg.set_payload(b"\x80\x81\x82")  # Invalid UTF-8
 
-        mock_mail.fetch.return_value = ("OK", [(b"", msg.as_bytes())])
+        class BadPayloadMessage(Message):
+            def get_payload(self, decode=False):
+                # When decode=True, return bytes that will fail UTF-8 decoding
+                if decode:
+                    return b"\x80\x81\x82"
+                return super().get_payload(decode=decode)
 
-        emails = EmailService.fetch_recent_emails("user@test.com", "pass")
+        # Patch message_from_bytes so that EmailService uses our BadPayloadMessage
+        with patch(
+            "backend.services.email_service.email.message_from_bytes"
+        ) as mock_message_from_bytes:
+            bad_msg = BadPayloadMessage()
+            bad_msg["Subject"] = "Test"
+            bad_msg["From"] = "test@test.com"
+            bad_msg["Date"] = "Mon, 01 Jan 2024 12:00:00 +0000"
+            bad_msg["Message-ID"] = "<test@test.com>"
+
+            mock_message_from_bytes.return_value = bad_msg
+
+            # The actual bytes returned here don't matter, since we override
+            # message_from_bytes to always return bad_msg.
+            mock_mail.fetch.return_value = ("OK", [(b"", b"raw-bytes")])
+
+            emails = EmailService.fetch_recent_emails("user@test.com", "pass")
+
         # Should handle exception and still return email with empty body
         assert len(emails) == 1
+        assert emails[0]["subject"] == "Test"
+        assert emails[0]["from"] == "test@test.com"
+        assert emails[0]["body"] == ""
 
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_multipart_decode_exceptions(self, mock_imap):
