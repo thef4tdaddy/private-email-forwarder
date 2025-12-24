@@ -238,7 +238,9 @@ def get_preferences_for_sendee(token: str, session: Session = Depends(get_sessio
     if not email:
         raise HTTPException(status_code=403, detail="Invalid or expired token")
 
-    prefs = session.exec(select(Preference)).all()
+    prefs = session.exec(
+        select(Preference).where(Preference.type.in_(["Blocked Sender", "Always Forward"]))
+    ).all()
     return {
         "success": True,
         "email": email,
