@@ -20,7 +20,7 @@
 		try {
 			const url = token
 				? `/api/actions/preferences-for-sendee?token=${encodeURIComponent(token)}`
-				: '/api/settings/preferences'; // Admin path (needs to be implemented or uses existing)
+				: '/api/actions/preferences-for-sendee'; // Admin uses session via same endpoint
 
 			const res = await fetchJson(url);
 			if (res.success) {

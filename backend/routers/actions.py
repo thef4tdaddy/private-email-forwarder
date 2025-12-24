@@ -12,7 +12,7 @@ from backend.security import generate_hmac_signature, verify_dashboard_token
 from backend.services.command_service import CommandService
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlmodel import Session, col, select
@@ -194,49 +194,32 @@ def verify_dashboard(token: str):
 
 
 class UpdatePreferencesRequest(BaseModel):
-    token: str
+    token: str | None = None
     blocked_senders: list[str]
     allowed_senders: list[str]
 
 
-@router.post("/update-preferences")
-def update_preferences(
-    request: UpdatePreferencesRequest, session: Session = Depends(get_session)
-):
-    """Allows a sendee to update their preferences via a signed token."""
-    email = verify_dashboard_token(request.token)
-    if not email:
-        raise HTTPException(status_code=403, detail="Invalid or expired token")
-
-    # For now, we manage global preferences, but we could filter by recipient in the future.
-    # The user request implies a general dashboard for preferences.
-
-    # 1. Clear existing for these items to avoid duplicates
-    items_to_handle = request.blocked_senders + request.allowed_senders
-    if items_to_handle:
-        existing = session.exec(
-            select(Preference).where(Preference.item.in_(items_to_handle))  # type: ignore
-        ).all()
-        for p in existing:
-            session.delete(p)
-        session.commit()
-
-    # 2. Add new ones
-    for s in request.blocked_senders:
-        session.add(Preference(item=s, type="Blocked Sender"))
-    for s in request.allowed_senders:
-        session.add(Preference(item=s, type="Always Forward"))
-
-    session.commit()
-    return {"success": True}
-
-
 @router.get("/preferences-for-sendee")
-def get_preferences_for_sendee(token: str, session: Session = Depends(get_session)):
-    """Get current preferences for a sendee."""
-    email = verify_dashboard_token(token)
-    if not email:
-        raise HTTPException(status_code=403, detail="Invalid or expired token")
+def get_preferences_for_sendee(
+    request: Request,
+    token: str | None = Query(None),
+    session: Session = Depends(get_session),
+):
+    """
+    Get current preferences for a sendee (via token) or admin (via session).
+    """
+    email = None
+
+    if token:
+        # 1. Token Access
+        email = verify_dashboard_token(token)
+        if not email:
+            raise HTTPException(status_code=403, detail="Invalid or expired token")
+    else:
+        # 2. Admin Access (Session)
+        if not request.session.get("authenticated"):
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        email = "Admin"  # Placeholder for admin view
 
     prefs = session.exec(
         select(Preference).where(
@@ -249,6 +232,52 @@ def get_preferences_for_sendee(token: str, session: Session = Depends(get_sessio
         "blocked": [p.item for p in prefs if p.type == "Blocked Sender"],
         "allowed": [p.item for p in prefs if p.type == "Always Forward"],
     }
+
+
+@router.post("/update-preferences")
+def update_preferences(
+    data: UpdatePreferencesRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    """
+    Update preferences via bulk replace. Supports Token or Admin Session.
+    """
+    # Verify Auth
+    if data.token:
+        email = verify_dashboard_token(data.token)
+        if not email:
+            raise HTTPException(status_code=403, detail="Invalid or expired token")
+    else:
+        if not request.session.get("authenticated"):
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Transactional Update
+    try:
+        # 1. Remove existing Blocked/Allowed preferences
+        # Note: We don't filter by user because Preference is currently global
+        existing = session.exec(
+            select(Preference).where(
+                col(Preference.type).in_(["Blocked Sender", "Always Forward"])
+            )
+        ).all()
+        for p in existing:
+            session.delete(p)
+
+        # 2. Add new Blocked Senders
+        for item in data.blocked_senders:
+            session.add(Preference(item=item, type="Blocked Sender"))
+
+        # 3. Add new Allowed Senders
+        for item in data.allowed_senders:
+            session.add(Preference(item=item, type="Always Forward"))
+
+        session.commit()
+        return {"success": True, "message": "Preferences updated"}
+
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class ToggleIgnoredRequest(BaseModel):
