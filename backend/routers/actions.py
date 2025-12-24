@@ -11,7 +11,7 @@ from backend.database import engine, get_session
 from backend.models import ManualRule, Preference, ProcessedEmail
 from backend.services.command_service import CommandService
 from backend.services.email_service import EmailService
-from backend.services.forwarder import EmailForwarder, format_email_date
+from backend.services.forwarder import EmailForwarder
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
