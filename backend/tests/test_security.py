@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 from backend.security import decrypt_content, encrypt_content, get_fernet
 from cryptography.fernet import Fernet
 
@@ -38,3 +39,17 @@ def test_get_fernet_missing_key(monkeypatch):
 def test_get_fernet_valid_key():
     f = get_fernet()
     assert isinstance(f, Fernet)
+
+
+def test_decrypt_unexpected_exception():
+    """Test that unexpected exceptions during decryption are handled gracefully."""
+    # Create valid encrypted content first
+    content = "Test content"
+    encrypted = encrypt_content(content)
+    
+    # Mock the Fernet.decrypt method to raise an unexpected exception
+    with patch.object(Fernet, 'decrypt', side_effect=RuntimeError("Unexpected error")):
+        # Should catch the exception and return empty string
+        result = decrypt_content(encrypted)
+        assert result == ""
+
