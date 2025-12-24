@@ -511,7 +511,7 @@ def test_preference_blocked_category(test_session):
     assert ReceiptDetector.is_receipt(email, test_session) is False
 
 
-def test_database_exception_handling(test_session):
+def test_database_exception_handling():
     """Test that exceptions in database checks are handled gracefully"""
     # Create a mock session that raises an exception
     mock_session = MagicMock()
