@@ -176,12 +176,16 @@ class ReceiptDetector:
 
     @staticmethod
     def _mask_text(text: str, max_chars: int = 20) -> str:
-        """Helper to mask sensitive text for safe logging."""
+        """Helper to mask sensitive text for safe logging.
+
+        This implementation deliberately avoids including any part of the original
+        text in the log output to prevent leaking sensitive information. Only the
+        length of the text is exposed.
+        """
         if not text:
             return ""
-        if len(text) <= 5:
-            return "***"
-        return f"{text[:3]}...{text[-2:]} ({len(text)} chars)"
+        length = len(text)
+        return f"*** (masked, {length} chars)"
 
     @staticmethod
     def _check_manual_rules(
