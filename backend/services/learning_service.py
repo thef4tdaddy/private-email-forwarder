@@ -182,13 +182,7 @@ class LearningService:
                 # So:
                 # 1. Fetch all emails from last N days
                 # simplistic provider mapping
-                imap_server = "imap.gmail.com"
-                if "outlook" in provider.lower() or "hotmail" in provider.lower():
-                    imap_server = "outlook.office365.com"
-                elif "yahoo" in provider.lower():
-                    imap_server = "imap.mail.yahoo.com"
-                elif "icloud" in provider.lower():
-                    imap_server = "imap.mail.me.com"
+                imap_server = acct.get("imap_server", "imap.gmail.com")
 
                 fetched = EmailService.fetch_recent_emails(
                     username=user,
