@@ -659,11 +659,18 @@ class TestEmailService:
         bad_html_part.set_payload(b"\x80\x81\x82")  # Invalid UTF-8
         msg.attach(bad_html_part)
 
+        # Add a valid text part to ensure processing continues after exceptions
+        good_text_part = MIMEText("Good text body")
+        msg.attach(good_text_part)
+
         mock_mail.fetch.return_value = ("OK", [(b"", msg.as_bytes())])
 
         result = EmailService.fetch_email_by_id("user", "pass", "<test@test.com>")
-        # Should handle exceptions and still return result
+        # Should handle exceptions, continue processing, and still return result
         assert result is not None
+        # The valid part should be decoded and included in the body
+        assert isinstance(result, dict)
+        assert "Good text body" in result.get("body", "")
 
     @patch.dict(os.environ, {"EMAIL_BATCH_LIMIT": "5"}, clear=True)
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
