@@ -15,7 +15,7 @@ from backend.services.forwarder import EmailForwarder
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
 
@@ -239,7 +239,9 @@ def get_preferences_for_sendee(token: str, session: Session = Depends(get_sessio
         raise HTTPException(status_code=403, detail="Invalid or expired token")
 
     prefs = session.exec(
-        select(Preference).where(Preference.type.in_(["Blocked Sender", "Always Forward"]))  # type: ignore
+        select(Preference).where(
+            col(Preference.type).in_(["Blocked Sender", "Always Forward"])
+        )
     ).all()
     return {
         "success": True,

@@ -3,7 +3,7 @@ import os
 import re
 from typing import Any, Dict, Optional
 
-from sqlmodel import select
+from sqlmodel import col, select
 
 from ..models import ManualRule, Preference
 from .email_service import EmailService
@@ -57,7 +57,7 @@ class ReceiptDetector:
                 # 3. Preferences (Blocked Sender / Category)
                 blocked = session.exec(
                     select(Preference).where(
-                        Preference.type.in_(["Blocked Sender", "Blocked Category"])  # type: ignore
+                        col(Preference.type).in_(["Blocked Sender", "Blocked Category"])
                     )
                 ).all()
                 for pref in blocked:
