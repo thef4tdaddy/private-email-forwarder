@@ -11,7 +11,7 @@ from backend.database import engine, get_session
 from backend.models import ManualRule, Preference, ProcessedEmail
 from backend.services.command_service import CommandService
 from backend.services.email_service import EmailService
-from backend.services.forwarder import EmailForwarder
+from backend.services.forwarder import EmailForwarder, format_email_date
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -341,11 +341,7 @@ A manual rule has been created to forward future emails from this sender."""
         "from": email.sender,  # We populate 'from' field in the forwarded email template usually
         "body": final_body,
         "account_email": email.account_email,
-        "date": (
-            email.received_at.strftime("%a, %d %b %Y %H:%M:%S %z")
-            if email.received_at
-            else None
-        ),
+        "date": email.received_at,  # format_email_date will handle datetime objects
     }
 
     try:

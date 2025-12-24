@@ -16,6 +16,38 @@ from backend.services.email_service import EmailService
 from sqlmodel import Session, select
 
 
+def format_email_date(date_input) -> str:
+    """
+    Format an email date for display in forwarded emails.
+
+    Args:
+        date_input: Can be either:
+            - A string in RFC 2822 format (from email headers)
+            - A datetime object (from database)
+            - None
+
+    Returns:
+        Formatted date string in the format "December 21, 2023 at 10:30 AM +0000"
+        Returns "Unknown" if date_input is None or parsing fails
+    """
+    if date_input is None:
+        return "Unknown"
+
+    try:
+        # If it's already a datetime object, use it directly
+        if isinstance(date_input, datetime):
+            dt = date_input
+        else:
+            # Parse the date string using email.utils which handles RFC 2822 format
+            dt = parsedate_to_datetime(date_input)
+
+        # Format with numeric timezone offset which is more reliable than %Z
+        return dt.strftime("%B %d, %Y at %I:%M %p %z")
+    except Exception:
+        # If parsing fails, return the raw string if available, otherwise "Unknown"
+        return str(date_input) if date_input else "Unknown"
+
+
 class EmailForwarder:
     @staticmethod
     def forward_email(original_email_data: dict, target_email: str):
@@ -74,17 +106,7 @@ class EmailForwarder:
                 pass
 
         # Parse the received date from the email
-        received_date_str = "Unknown"
-        date_header = original_email_data.get("date")
-        if date_header:
-            try:
-                # Parse the date using email.utils which handles RFC 2822 format
-                received_dt = parsedate_to_datetime(date_header)
-                # Format the date in a readable format
-                received_date_str = received_dt.strftime("%B %d, %Y at %I:%M %p %Z")
-            except Exception:
-                # If parsing fails, use the raw date string
-                received_date_str = date_header
+        received_date_str = format_email_date(original_email_data.get("date"))
 
         # Prepare content
         body_content = original_email_data.get("body", "")

@@ -620,6 +620,59 @@ class TestEmailForwarder:
         os.environ,
         {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
     )
+    def test_format_email_date_with_datetime_object(self, mock_smtp):
+        """Test that format_email_date works with datetime objects"""
+        from backend.services.forwarder import format_email_date
+        from datetime import datetime, timezone
+
+        # Test with datetime object
+        dt = datetime(2023, 12, 21, 10, 30, 0, tzinfo=timezone.utc)
+        formatted = format_email_date(dt)
+        assert "December 21, 2023" in formatted
+        assert "+0000" in formatted
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_format_email_date_with_rfc2822_string(self, mock_smtp):
+        """Test that format_email_date works with RFC 2822 strings"""
+        from backend.services.forwarder import format_email_date
+
+        # Test with RFC 2822 string
+        formatted = format_email_date("Thu, 21 Dec 2023 10:30:00 +0000")
+        assert "December 21, 2023" in formatted
+        assert "+0000" in formatted
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_format_email_date_with_none(self, mock_smtp):
+        """Test that format_email_date returns 'Unknown' for None"""
+        from backend.services.forwarder import format_email_date
+
+        assert format_email_date(None) == "Unknown"
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_format_email_date_with_invalid_string(self, mock_smtp):
+        """Test that format_email_date returns raw string for invalid input"""
+        from backend.services.forwarder import format_email_date
+
+        result = format_email_date("Invalid Date Format")
+        assert "Invalid Date Format" in result
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
     def test_forward_email_includes_received_date(self, mock_smtp):
         """Test that forwarded email includes the received date from original email"""
         mock_server = Mock()
