@@ -3,16 +3,21 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel.pool import StaticPool
 
 from backend.models import ManualRule, Preference
 from backend.services.detector import ReceiptDetector
 
 
 # Create in-memory SQLite database for testing
-@pytest.fixture
-def test_session():
+@pytest.fixture(name="session")
+def session_fixture():
     """Create a test database session with proper table setup"""
-    engine = create_engine("sqlite:///:memory:")
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         yield session
@@ -371,7 +376,7 @@ def test_promotional_patterns():
 # ============================================================================
 
 
-def test_manual_rule_with_email_pattern(test_session):
+def test_manual_rule_with_email_pattern(session):
     """Test manual rule matching with email pattern"""
     rule = ManualRule(
         email_pattern="*@shop.com",
@@ -379,16 +384,16 @@ def test_manual_rule_with_email_pattern(test_session):
         priority=10,
         purpose="Test Shop Rule",
     )
-    test_session.add(rule)
-    test_session.commit()
+    session.add(rule)
+    session.commit()
 
     email = MockEmail(
         subject="Random Subject", body="Some content", sender="orders@shop.com"
     )
-    assert ReceiptDetector.is_receipt(email, test_session) is True
+    assert ReceiptDetector.is_receipt(email, session) is True
 
 
-def test_manual_rule_with_subject_pattern(test_session):
+def test_manual_rule_with_subject_pattern(session):
     """Test manual rule matching with subject pattern"""
     rule = ManualRule(
         email_pattern=None,
@@ -396,16 +401,16 @@ def test_manual_rule_with_subject_pattern(test_session):
         priority=10,
         purpose="Order Pattern Rule",
     )
-    test_session.add(rule)
-    test_session.commit()
+    session.add(rule)
+    session.commit()
 
     email = MockEmail(
         subject="Your order is ready", body="Content", sender="shop@example.com"
     )
-    assert ReceiptDetector.is_receipt(email, test_session) is True
+    assert ReceiptDetector.is_receipt(email, session) is True
 
 
-def test_manual_rule_with_both_patterns(test_session):
+def test_manual_rule_with_both_patterns(session):
     """Test manual rule with both email and subject patterns"""
     rule = ManualRule(
         email_pattern="*@amazon.com",
@@ -413,8 +418,8 @@ def test_manual_rule_with_both_patterns(test_session):
         priority=20,
         purpose="Amazon Confirmation Rule",
     )
-    test_session.add(rule)
-    test_session.commit()
+    session.add(rule)
+    session.commit()
 
     # Both patterns match
     email1 = MockEmail(
@@ -422,16 +427,16 @@ def test_manual_rule_with_both_patterns(test_session):
         body="Thank you",
         sender="orders@amazon.com",
     )
-    assert ReceiptDetector.is_receipt(email1, test_session) is True
+    assert ReceiptDetector.is_receipt(email1, session) is True
 
     # Only email matches - should not match
     email2 = MockEmail(
         subject="Random Subject", body="Content", sender="info@amazon.com"
     )
-    assert ReceiptDetector.is_receipt(email2, test_session) is False
+    assert ReceiptDetector.is_receipt(email2, session) is False
 
 
-def test_manual_rule_priority_ordering(test_session):
+def test_manual_rule_priority_ordering(session):
     """Test that higher priority rules are checked first"""
     # Lower priority rule
     rule1 = ManualRule(
@@ -447,46 +452,46 @@ def test_manual_rule_priority_ordering(test_session):
         priority=15,
         purpose="High Priority Rule",
     )
-    test_session.add(rule1)
-    test_session.add(rule2)
-    test_session.commit()
+    session.add(rule1)
+    session.add(rule2)
+    session.commit()
 
     email = MockEmail(subject="Test", body="Content", sender="info@test.com")
     # Should match the higher priority rule
-    assert ReceiptDetector.is_receipt(email, test_session) is True
+    assert ReceiptDetector.is_receipt(email, session) is True
 
 
-def test_preference_always_forward_sender(test_session):
+def test_preference_always_forward_sender(session):
     """Test 'Always Forward' preference matching sender"""
     pref = Preference(item="paypal.com", type="Always Forward")
-    test_session.add(pref)
-    test_session.commit()
+    session.add(pref)
+    session.commit()
 
     email = MockEmail(
         subject="Random email", body="No receipt indicators", sender="service@paypal.com"
     )
-    assert ReceiptDetector.is_receipt(email, test_session) is True
+    assert ReceiptDetector.is_receipt(email, session) is True
 
 
-def test_preference_always_forward_subject(test_session):
+def test_preference_always_forward_subject(session):
     """Test 'Always Forward' preference matching subject"""
     pref = Preference(item="invoice", type="Always Forward")
-    test_session.add(pref)
-    test_session.commit()
+    session.add(pref)
+    session.commit()
 
     email = MockEmail(
         subject="Invoice for services",
         body="No other indicators",
         sender="billing@random.com",
     )
-    assert ReceiptDetector.is_receipt(email, test_session) is True
+    assert ReceiptDetector.is_receipt(email, session) is True
 
 
-def test_preference_blocked_sender(test_session):
+def test_preference_blocked_sender(session):
     """Test 'Blocked Sender' preference"""
     pref = Preference(item="marketing", type="Blocked Sender")
-    test_session.add(pref)
-    test_session.commit()
+    session.add(pref)
+    session.commit()
 
     # Even with strong receipt indicators, should be blocked
     email = MockEmail(
@@ -494,21 +499,21 @@ def test_preference_blocked_sender(test_session):
         body="Order #123456 Total: $50.00",
         sender="marketing@shop.com",
     )
-    assert ReceiptDetector.is_receipt(email, test_session) is False
+    assert ReceiptDetector.is_receipt(email, session) is False
 
 
-def test_preference_blocked_category(test_session):
+def test_preference_blocked_category(session):
     """Test 'Blocked Category' preference"""
     pref = Preference(item="newsletter", type="Blocked Category")
-    test_session.add(pref)
-    test_session.commit()
+    session.add(pref)
+    session.commit()
 
     email = MockEmail(
         subject="Monthly Newsletter with receipt info",
         body="Order #123456",
         sender="info@shop.com",
     )
-    assert ReceiptDetector.is_receipt(email, test_session) is False
+    assert ReceiptDetector.is_receipt(email, session) is False
 
 
 def test_database_exception_handling():
@@ -531,7 +536,7 @@ def test_database_exception_handling():
 # ============================================================================
 
 
-def test_debug_is_receipt_with_manual_rule(test_session):
+def test_debug_is_receipt_with_manual_rule(session):
     """Test debug_is_receipt returns trace with manual rule match"""
     rule = ManualRule(
         email_pattern="*@shop.com",
@@ -539,11 +544,11 @@ def test_debug_is_receipt_with_manual_rule(test_session):
         priority=10,
         purpose="Debug Test Rule",
     )
-    test_session.add(rule)
-    test_session.commit()
+    session.add(rule)
+    session.commit()
 
     email = MockEmail(subject="Test", body="Content", sender="orders@shop.com")
-    trace = ReceiptDetector.debug_is_receipt(email, test_session)
+    trace = ReceiptDetector.debug_is_receipt(email, session)
 
     assert trace["final_decision"] is True
     assert trace["matched_by"] == "Manual Rule"
@@ -578,7 +583,7 @@ def test_check_manual_rules_no_session():
     assert result is None
 
 
-def test_check_manual_rules_email_pattern_match(test_session):
+def test_check_manual_rules_email_pattern_match(session):
     """Test _check_manual_rules with email pattern match"""
     rule = ManualRule(
         email_pattern="*@trusted.com",
@@ -586,17 +591,17 @@ def test_check_manual_rules_email_pattern_match(test_session):
         priority=10,
         purpose="Trusted Sender",
     )
-    test_session.add(rule)
-    test_session.commit()
+    session.add(rule)
+    session.commit()
 
     result = ReceiptDetector._check_manual_rules(
-        "any subject", "sender@trusted.com", test_session
+        "any subject", "sender@trusted.com", session
     )
     assert result is not None
     assert result.purpose == "Trusted Sender"
 
 
-def test_check_manual_rules_subject_pattern_match(test_session):
+def test_check_manual_rules_subject_pattern_match(session):
     """Test _check_manual_rules with subject pattern match"""
     rule = ManualRule(
         email_pattern=None,
@@ -604,17 +609,17 @@ def test_check_manual_rules_subject_pattern_match(test_session):
         priority=10,
         purpose="Receipt Keyword",
     )
-    test_session.add(rule)
-    test_session.commit()
+    session.add(rule)
+    session.commit()
 
     result = ReceiptDetector._check_manual_rules(
-        "your receipt is ready", "any@sender.com", test_session
+        "your receipt is ready", "any@sender.com", session
     )
     assert result is not None
     assert result.purpose == "Receipt Keyword"
 
 
-def test_check_manual_rules_both_patterns_must_match(test_session):
+def test_check_manual_rules_both_patterns_must_match(session):
     """Test _check_manual_rules requires both patterns to match when both are set"""
     rule = ManualRule(
         email_pattern="*@shop.com",
@@ -622,33 +627,33 @@ def test_check_manual_rules_both_patterns_must_match(test_session):
         priority=10,
         purpose="Shop Orders",
     )
-    test_session.add(rule)
-    test_session.commit()
+    session.add(rule)
+    session.commit()
 
     # Only email matches
     result1 = ReceiptDetector._check_manual_rules(
-        "random subject", "info@shop.com", test_session
+        "random subject", "info@shop.com", session
     )
     assert result1 is None
 
     # Only subject matches
     result2 = ReceiptDetector._check_manual_rules(
-        "your order", "info@other.com", test_session
+        "your order", "info@other.com", session
     )
     assert result2 is None
 
     # Both match
     result3 = ReceiptDetector._check_manual_rules(
-        "your order", "info@shop.com", test_session
+        "your order", "info@shop.com", session
     )
     assert result3 is not None
     assert result3.purpose == "Shop Orders"
 
 
-def test_check_manual_rules_no_rules(test_session):
+def test_check_manual_rules_no_rules(session):
     """Test _check_manual_rules when no rules exist"""
     result = ReceiptDetector._check_manual_rules(
-        "subject", "sender@example.com", test_session
+        "subject", "sender@example.com", session
     )
     assert result is None
 
