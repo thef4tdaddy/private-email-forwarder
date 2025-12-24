@@ -105,8 +105,8 @@ class TestCommandService:
 
     @patch.dict(os.environ, {"WIFE_EMAIL": "sara@example.com"})
     @patch("backend.services.command_service.CommandService._send_confirmation")
-    def test_process_command_empty_lines(self, mock_send, session):
-        """Test line 40: Handle empty lines in email body (line 45 is unreachable)"""
+    def test_process_command_empty_body_only(self, mock_send, session):
+        """Test line 40: Handle empty lines in email body with no commands"""
         # Test with body that has ONLY empty lines (no commands)
         email_data = {
             "from": "sara@example.com",
@@ -114,7 +114,12 @@ class TestCommandService:
         }
         result = CommandService.process_command(email_data)
         assert result is False  # No command executed
+        mock_send.assert_not_called()
 
+    @patch.dict(os.environ, {"WIFE_EMAIL": "sara@example.com"})
+    @patch("backend.services.command_service.CommandService._send_confirmation")
+    def test_process_command_with_surrounding_empty_lines(self, mock_send, session):
+        """Test line 40: Handle empty lines surrounding commands (line 45 is unreachable)"""
         # Test with body that has empty lines mixed with command
         email_data = {
             "from": "sara@example.com",
@@ -145,6 +150,7 @@ class TestCommandService:
 
         # Ensure confirmation was sent only for the first add via process_command
         mock_send.assert_called_once()
+
     @patch.dict(
         os.environ,
         {
