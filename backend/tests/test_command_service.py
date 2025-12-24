@@ -143,6 +143,8 @@ class TestCommandService:
         captured = capsys.readouterr()
         assert "Preference already exists" in captured.out
 
+        # Ensure confirmation was sent only for the first add via process_command
+        mock_send.assert_called_once()
     @patch.dict(
         os.environ,
         {
