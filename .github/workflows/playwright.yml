@@ -50,7 +50,7 @@ jobs:
         if: always()
         uses: daun/playwright-report-summary@v3
         with:
-          report-file: frontend/results.json
+          report-file: frontend/playwright-report/results.json
           job-summary: true
           comment-title: "Playwright E2E Test Results"
 
