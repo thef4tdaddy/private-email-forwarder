@@ -32,6 +32,36 @@ function createThemeStore() {
 		} else {
 			document.documentElement.classList.remove('dark');
 		}
+
+		// Listen for system theme preference changes when there is no explicit user preference
+		if (typeof window.matchMedia === 'function') {
+			const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+			const handleChange = (event: MediaQueryListEvent) => {
+				// Do not override an explicit user choice stored in localStorage
+				const stored = localStorage.getItem('theme') as Theme | null;
+				if (stored === 'light' || stored === 'dark') {
+					return;
+				}
+
+				const newTheme: Theme = event.matches ? 'dark' : 'light';
+				// Update the store value without persisting to localStorage
+				set(newTheme);
+
+				if (newTheme === 'dark') {
+					document.documentElement.classList.add('dark');
+				} else {
+					document.documentElement.classList.remove('dark');
+				}
+			};
+
+			if (typeof mediaQuery.addEventListener === 'function') {
+				mediaQuery.addEventListener('change', handleChange);
+			} else if (typeof mediaQuery.addListener === 'function') {
+				// Fallback for older browsers
+				mediaQuery.addListener(handleChange);
+			}
+		}
 	}
 	
 	return {
