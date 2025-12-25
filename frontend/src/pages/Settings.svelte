@@ -1,6 +1,7 @@
 <script lang="ts">
 	import PreferenceList from '../components/PreferenceList.svelte';
 	import EmailTemplateEditor from '../components/EmailTemplateEditor.svelte';
+	import AccountList from '../components/AccountList.svelte';
 	import ConfirmDialog from '../components/ConfirmDialog.svelte';
 	import { fetchJson } from '../lib/api';
 	import { toasts } from '../lib/stores/toast';
@@ -12,7 +13,8 @@
 		CheckCircle,
 		AlertTriangle,
 		Loader2,
-		History as HistoryIcon
+		History as HistoryIcon,
+		User
 	} from 'lucide-svelte';
 	import { onMount, onDestroy } from 'svelte';
 
@@ -144,6 +146,15 @@
 				</div>
 			{/each}
 		</div>
+	</section>
+
+	<!-- Email Accounts Management Section -->
+	<section>
+		<div class="flex items-center gap-2 mb-4">
+			<User size={20} class="text-text-secondary" />
+			<h3 class="text-lg font-bold text-text-main">Email Accounts</h3>
+		</div>
+		<AccountList />
 	</section>
 
 	<!-- Email Template Section -->
