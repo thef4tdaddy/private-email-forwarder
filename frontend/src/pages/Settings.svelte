@@ -228,7 +228,7 @@
 	onConfirm={handleConfirmDelete}
 	onCancel={handleCancelDelete}
 	title="Delete Email Account"
-	message={accountToDelete ? `Are you sure you want to delete the account "${accountToDelete.email}"? This action cannot be undone.` : ''}
+	message={accountToDelete ? `Are you sure you want to delete the account "${accountToDelete.email}"? This action cannot be undone.` : 'Delete this account?'}
 	confirmText="Delete"
 	cancelText="Cancel"
 />

@@ -278,9 +278,6 @@ def test_email_account(account_id: int, session: Session = Depends(get_session))
     except ValueError as e:
         logging.error(f"Password decryption failed for account {account_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to decrypt password")
-    except Exception as e:
-        logging.error(f"Unexpected error decrypting password for account {account_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to decrypt password")
 
     # Test connection
     result = EmailService.test_connection(account.username, password, account.host)
