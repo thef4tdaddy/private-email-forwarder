@@ -450,7 +450,7 @@
 						<tr>
 							<td colspan="6" class="py-12 text-center text-text-secondary dark:text-text-secondary-dark">
 								<div class="flex flex-col items-center justify-center gap-3">
-									<div class="bg-gray-100 p-3 rounded-full">
+									<div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-full">
 										<Mail size={24} class="text-gray-400" />
 									</div>
 									<p>No emails found.</p>
