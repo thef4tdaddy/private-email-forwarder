@@ -4,7 +4,7 @@
 	import ConfirmDialog from '../components/ConfirmDialog.svelte';
 	import { fetchJson } from '../lib/api';
 	import { toasts } from '../lib/stores/toast';
-	import { theme } from '../lib/stores/theme';
+	import { theme as themeStore } from '../lib/stores/theme';
 	import {
 		Play,
 		Settings,
@@ -30,15 +30,12 @@
 	let checkingConnections = $state(false);
 	let pollInterval: ReturnType<typeof setInterval>;
 	let showConfirmDialog = $state(false);
-	let currentTheme = $state<'light' | 'dark'>('light');
 
-	// Subscribe to theme changes
-	theme.subscribe(value => {
-		currentTheme = value;
-	});
+	// Reactive theme value using $derived
+	const currentTheme = $derived($themeStore);
 
 	function toggleTheme() {
-		theme.toggle();
+		themeStore.toggle();
 	}
 
 	function openConfirmDialog() {

@@ -22,7 +22,17 @@ function getInitialTheme(): Theme {
 }
 
 function createThemeStore() {
-	const { subscribe, set, update } = writable<Theme>(getInitialTheme());
+	const initialTheme = getInitialTheme();
+	const { subscribe, set, update } = writable<Theme>(initialTheme);
+	
+	// Initialize dark class on document
+	if (isBrowser) {
+		if (initialTheme === 'dark') {
+			document.documentElement.classList.add('dark');
+		} else {
+			document.documentElement.classList.remove('dark');
+		}
+	}
 	
 	return {
 		subscribe,
@@ -31,7 +41,11 @@ function createThemeStore() {
 				const newTheme = current === 'dark' ? 'light' : 'dark';
 				if (isBrowser) {
 					localStorage.setItem('theme', newTheme);
-					document.documentElement.classList.toggle('dark', newTheme === 'dark');
+					if (newTheme === 'dark') {
+						document.documentElement.classList.add('dark');
+					} else {
+						document.documentElement.classList.remove('dark');
+					}
 				}
 				return newTheme;
 			});
@@ -39,16 +53,13 @@ function createThemeStore() {
 		set: (theme: Theme) => {
 			if (isBrowser) {
 				localStorage.setItem('theme', theme);
-				document.documentElement.classList.toggle('dark', theme === 'dark');
+				if (theme === 'dark') {
+					document.documentElement.classList.add('dark');
+				} else {
+					document.documentElement.classList.remove('dark');
+				}
 			}
 			set(theme);
-		},
-		init: () => {
-			if (isBrowser) {
-				const theme = getInitialTheme();
-				document.documentElement.classList.toggle('dark', theme === 'dark');
-				set(theme);
-			}
 		}
 	};
 }
