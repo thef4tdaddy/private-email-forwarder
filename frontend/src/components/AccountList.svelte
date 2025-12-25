@@ -96,7 +96,6 @@
 	async function testAccount(id: number) {
 		try {
 			testingAccounts.add(id);
-			testingAccounts = testingAccounts; // Trigger reactivity
 			const result = await fetchJson(`/settings/accounts/${id}/test`, { method: 'POST' });
 
 			if (result.success) {
@@ -108,7 +107,6 @@
 			toasts.trigger('Failed to test connection', 'error');
 		} finally {
 			testingAccounts.delete(id);
-			testingAccounts = testingAccounts; // Trigger reactivity
 		}
 	}
 
