@@ -149,7 +149,7 @@ class EmailAccountCreate(BaseModel):
     host: str = "imap.gmail.com"
     port: int = 993
     username: str
-    password: str  # Plain text password (will be encrypted before storage)
+    password: str  # WARNING: This password is sent in plain text in the request body; ensure this endpoint is only served over HTTPS/TLS. It will be encrypted before storage.
 
 
 class EmailAccountResponse(BaseModel):
