@@ -5,7 +5,7 @@ This document maintains an inventory of active GitHub Actions workflows and a wi
 ## 🤖 Active Workflow Inventory
 
 | Workflow                 | Trigger         | Purpose                                                                                                      |
-| :----------------------- | :-------------- | :----------------------------------------------------------------------------------------------------------- |
+| :----------------------- | :-------------- | :----------------------------------------------------------------------------------------------------------- | --- |
 | **CI** (`ci.yml`)        | Push/PR         | Runs Frontend (Lint, Typecheck, Build) and Backend (Ruff, Mypy, Pytest) validation.                          |
 | **Daily Health Check**   | Schedule/Manual | Runs full test-suite daily to detect regressions in `develop` not caught by PRs (e.g., date-dependent bugs). |
 | **Release Please**       | Main Push       | Automates changelog generation and version tagging based on conventional commits.                            |
@@ -15,7 +15,7 @@ This document maintains an inventory of active GitHub Actions workflows and a wi
 | **Auto-Approve Copilot** | PR              | Automatically approves low-risk workflow runs triggered by Copilot agents.                                   |
 | **Stale Issues**         | Schedule        | Automatically closes issues/PRs that have had no activity for 60+ days.                                      |
 | **Dependency Review**    | PR              | Scans PR dependency changes for vulnerabilities before they merge.                                           |
-| **CodeQL Analysis**      | Schedule/PR     | Deep semantic code analysis to find security vulnerabilities (SQL injection, XSS).                           |
+| **CodeQL Analysis**      | Schedule/PR     | Deep semantic code analysis (Managed via GitHub Default Setup).                                              |     |
 | **Spell Check**          | PR              | Catches typos in documentation and code comments.                                                            |
 | **Bundle Size**          | PR              | Monitors frontend bundle size (Limit: 300kB JS, 100ms load).                                                 |
 | **Lighthouse CI**        | PR              | Audits Frontend Performance, Accessibility, and SEO (PWA disabled).                                          |

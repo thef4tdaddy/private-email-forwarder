@@ -46,6 +46,14 @@ jobs:
           GMAIL_PASSWORD: "test"
           DASHBOARD_PASSWORD: "test_password"
 
+      - name: Publish Playwright Report Summary
+        if: always()
+        uses: daun/playwright-report-summary@v3
+        with:
+          report-file: frontend/results.json
+          job-summary: true
+          comment-title: "Playwright E2E Test Results"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

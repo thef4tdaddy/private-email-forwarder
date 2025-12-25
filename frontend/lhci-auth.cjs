@@ -1,4 +1,3 @@
-/* eslint-env node */
 /**
  * Puppeteer script to handle login and API mocking for Lighthouse CI.
  * Since we are testing a static build without a backend, we mock the API responses.
