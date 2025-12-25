@@ -8,12 +8,16 @@
 	import Login from './pages/Login.svelte';
 	import SendeeDashboard from './pages/SendeeDashboard.svelte';
 	import Toast from './components/Toast.svelte';
+	import { theme } from './lib/stores/theme';
 	import './app.css';
 
 	let currentView = 'loading';
 	let dashboardToken: string | null = null;
 
 	onMount(async () => {
+		// Initialize theme
+		theme.init();
+		
 		// Check for token in URL first (Sendee access)
 		const params = new URLSearchParams(window.location.search);
 		const token = params.get('token');
@@ -45,7 +49,7 @@
 	}
 </script>
 
-<main class="min-h-screen bg-gray-50">
+<main class="min-h-screen bg-gray-50 dark:bg-gray-900">
 	{#if currentView === 'loading'}
 		<div class="h-screen flex items-center justify-center">
 			<span class="loading loading-spinner loading-lg text-primary"></span>
