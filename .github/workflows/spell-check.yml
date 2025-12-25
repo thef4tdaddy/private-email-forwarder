@@ -3,7 +3,9 @@ name: Spell Checker
 on:
   push:
     branches: ["**"]
-  pull_request_target:
+  push:
+    branches: ["**"]
+  pull_request:
     branches: ["**"]
 
 jobs:
@@ -16,7 +18,6 @@ jobs:
     outputs:
       followup: ${{ steps.spelling.outputs.followup }}
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
     concurrency:
       group: spelling-${{ github.event.pull_request.number || github.ref }}
       # note: If you use only_check_changed_files, you do not want cancel-in-progress
