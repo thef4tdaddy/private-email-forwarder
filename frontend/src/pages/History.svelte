@@ -641,7 +641,7 @@
 	<!-- Processing Runs -->
 	<div class="card">
 		<div class="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
-			<div class="p-2 bg-purple-50 text-purple-600 rounded-lg">
+			<div class="p-2 bg-purple-50 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400 rounded-lg">
 				<HistoryIcon size={20} />
 			</div>
 			<h3 class="text-lg font-bold text-text-main m-0">Recent Processing Runs</h3>
