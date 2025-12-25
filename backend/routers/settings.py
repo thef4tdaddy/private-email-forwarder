@@ -139,3 +139,144 @@ def test_connections():
         )
 
     return results
+
+
+# Email Account Management Endpoints
+
+
+class EmailAccountCreate(BaseModel):
+    email: str
+    host: str = "imap.gmail.com"
+    port: int = 993
+    username: str
+    password: str  # Plain text password (will be encrypted before storage)
+
+
+class EmailAccountResponse(BaseModel):
+    id: int
+    email: str
+    host: str
+    port: int
+    username: str
+    is_active: bool
+    created_at: str
+    updated_at: str
+
+
+@router.get("/accounts", response_model=List[EmailAccountResponse])
+def get_email_accounts(session: Session = Depends(get_session)):
+    """Get all email accounts (without passwords)"""
+    from backend.models import EmailAccount
+
+    accounts = session.exec(select(EmailAccount)).all()
+    return [
+        EmailAccountResponse(
+            id=acc.id,
+            email=acc.email,
+            host=acc.host,
+            port=acc.port,
+            username=acc.username,
+            is_active=acc.is_active,
+            created_at=acc.created_at.isoformat(),
+            updated_at=acc.updated_at.isoformat(),
+        )
+        for acc in accounts
+    ]
+
+
+@router.post("/accounts", response_model=EmailAccountResponse)
+def create_email_account(
+    account: EmailAccountCreate, session: Session = Depends(get_session)
+):
+    """Create a new email account"""
+    from datetime import datetime, timezone
+
+    from backend.models import EmailAccount
+    from backend.services.encryption_service import EncryptionService
+
+    # Check if account already exists
+    existing = session.exec(
+        select(EmailAccount).where(EmailAccount.email == account.email)
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=400, detail="Account with this email already exists"
+        )
+
+    # Encrypt the password
+    try:
+        encrypted_password = EncryptionService.encrypt(account.password)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Encryption failed: {str(e)}")
+
+    # Create the account
+    now = datetime.now(timezone.utc)
+    new_account = EmailAccount(
+        email=account.email,
+        host=account.host,
+        port=account.port,
+        username=account.username,
+        encrypted_password=encrypted_password,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    )
+
+    session.add(new_account)
+    session.commit()
+    session.refresh(new_account)
+
+    return EmailAccountResponse(
+        id=new_account.id,
+        email=new_account.email,
+        host=new_account.host,
+        port=new_account.port,
+        username=new_account.username,
+        is_active=new_account.is_active,
+        created_at=new_account.created_at.isoformat(),
+        updated_at=new_account.updated_at.isoformat(),
+    )
+
+
+@router.delete("/accounts/{account_id}")
+def delete_email_account(account_id: int, session: Session = Depends(get_session)):
+    """Delete an email account"""
+    from backend.models import EmailAccount
+
+    account = session.get(EmailAccount, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    session.delete(account)
+    session.commit()
+    return {"ok": True}
+
+
+@router.post("/accounts/{account_id}/test")
+def test_email_account(account_id: int, session: Session = Depends(get_session)):
+    """Test connection for a specific email account"""
+    from backend.models import EmailAccount
+    from backend.services.encryption_service import EncryptionService
+
+    account = session.get(EmailAccount, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    # Decrypt password
+    try:
+        password = EncryptionService.decrypt(account.encrypted_password)
+        if not password:
+            raise HTTPException(status_code=500, detail="Failed to decrypt password")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Decryption failed: {str(e)}"
+        )
+
+    # Test connection
+    result = EmailService.test_connection(account.username, password, account.host)
+
+    return {
+        "account": account.email,
+        "success": result["success"],
+        "error": result["error"],
+    }
