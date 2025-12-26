@@ -54,15 +54,28 @@ jobs:
           set -o pipefail
           {
             EXIT_CODE=0
+            
             echo "::group::Black"
-            python -m black --check . || EXIT_CODE=1
+            python -m black --check .
+            BLACK_RES=$?
+            echo "STATUS_BLACK:$BLACK_RES"
+            if [ $BLACK_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
+            
             echo "::group::Ruff"
-            python -m ruff check . || EXIT_CODE=1
+            python -m ruff check .
+            RUFF_RES=$?
+            echo "STATUS_RUFF:$RUFF_RES"
+            if [ $RUFF_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
+            
             echo "::group::Mypy"
-            python -m mypy . --ignore-missing-imports || EXIT_CODE=1
+            python -m mypy . --ignore-missing-imports
+            MYPY_RES=$?
+            echo "STATUS_MYPY:$MYPY_RES"
+            if [ $MYPY_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
+            
             exit $EXIT_CODE
           } 2>&1 | tee ../backend_lint.log
         continue-on-error: true
@@ -74,7 +87,10 @@ jobs:
           source venv/bin/activate
           set -o pipefail
           # Run tests and output coverage report. Fail under 50%.
-          pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/ 2>&1 | tee ../backend_test.log
+          {
+            pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/
+            echo "STATUS_PYTEST:$?"
+          } 2>&1 | tee ../backend_test.log
         continue-on-error: true
 
       # --- Frontend Salvo ---
@@ -85,15 +101,28 @@ jobs:
           set -o pipefail
           {
             EXIT_CODE=0
+            
             echo "::group::Prettier"
-            npx prettier --check "src/**/*.{ts,js,svelte,css}" || EXIT_CODE=1
+            npx prettier --check "src/**/*.{ts,js,svelte,css}"
+            PRETTIER_RES=$?
+            echo "STATUS_PRETTIER:$PRETTIER_RES"
+            if [ $PRETTIER_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
+            
             echo "::group::ESLint"
-            npm run lint || EXIT_CODE=1
+            npm run lint
+            ESLINT_RES=$?
+            echo "STATUS_ESLINT:$ESLINT_RES"
+            if [ $ESLINT_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
+            
             echo "::group::Svelte Check"
-            npm run check || EXIT_CODE=1
+            npm run check
+            SVELTE_RES=$?
+            echo "STATUS_SVELTE:$SVELTE_RES"
+            if [ $SVELTE_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
+            
             exit $EXIT_CODE
           } 2>&1 | tee ../frontend_lint.log
         continue-on-error: true
@@ -103,8 +132,10 @@ jobs:
         run: |
           cd frontend
           set -o pipefail
-          # Fail if coverage is under 50%
-          npm run test:run -- --coverage --coverage.thresholds.lines=50 2>&1 | tee ../frontend_test.log
+          {
+            npm run test:run -- --coverage --coverage.thresholds.lines=50
+            echo "STATUS_VITEST:$?"
+          } 2>&1 | tee ../frontend_test.log
         continue-on-error: true
 
       - name: Frontend E2E (Playwright)
@@ -124,7 +155,10 @@ jobs:
 
           # Run Playwright
           cd ../frontend
-          npx playwright test 2>&1 | tee ../e2e_test.log
+          {
+             npx playwright test
+             echo "STATUS_PLAYWRIGHT:$?"
+          } 2>&1 | tee ../e2e_test.log
         continue-on-error: true
 
       # --- Reporting ---
@@ -164,56 +198,100 @@ jobs:
               }
             }
 
-            // Outcomes map
-            const outcomes = {
-              'Backend Linting': process.env.OUTCOME_BACKEND_LINT,
-              'Backend Tests': process.env.OUTCOME_BACKEND_TEST,
-              'Frontend Linting': process.env.OUTCOME_FRONTEND_LINT,
-              'Frontend Tests': process.env.OUTCOME_FRONTEND_TEST,
-              'Frontend E2E': process.env.OUTCOME_E2E
-            };
+            // --- Tool Status Parsing ---
+            const tools = [
+                { key: 'STATUS_BLACK', name: 'Black (Format)', log: logs.backend_lint },
+                { key: 'STATUS_RUFF', name: 'Ruff (Lint)', log: logs.backend_lint },
+                { key: 'STATUS_MYPY', name: 'Mypy (Type Check)', log: logs.backend_lint },
+                { key: 'STATUS_PYTEST', name: 'Pytest (Unit)', log: logs.backend_test },
+                { key: 'STATUS_PRETTIER', name: 'Prettier (Format)', log: logs.frontend_lint },
+                { key: 'STATUS_ESLINT', name: 'ESLint (Lint)', log: logs.frontend_lint },
+                { key: 'STATUS_SVELTE', name: 'Svelte Check (Types)', log: logs.frontend_lint },
+                { key: 'STATUS_VITEST', name: 'Vitest (Unit)', log: logs.frontend_test },
+                { key: 'STATUS_PLAYWRIGHT', name: 'Playwright (E2E)', log: logs.e2e }
+            ];
+
+            let toolRows = [];
+            let failures = [];
+
+            for (const tool of tools) {
+                const match = tool.log.match(new RegExp(`${tool.key}:(\\d+)`));
+                let status = '❓'; // Unknown (if log missing or marker not found)
+                let outcome = 'UNKNOWN';
+                
+                if (match) {
+                    const code = parseInt(match[1]);
+                    if (code === 0) {
+                        status = '✅';
+                        outcome = 'PASS';
+                    } else {
+                        status = '❌';
+                        outcome = 'FAIL';
+                        failures.push(tool.name);
+                    }
+                } else if (!tool.log.includes('Log file not found')) {
+                     // If log exists but marker missing, it likely crashed hard
+                     status = '❌';
+                     outcome = 'CRASH';
+                     failures.push(`${tool.name} (Crash)`);
+                }
+
+                toolRows.push(`| ${tool.name} | ${status} | ${outcome} |`);
+            }
 
             // Determine Overall Status
-            const overallStatus = Object.values(outcomes).every(o => o === 'success') ? 'success' : 'failure';
+            // We trust the granular tool checks plus the overall step outcomes (as backup)
+            const overallStatus = failures.length === 0 ? 'success' : 'failure';
             const icon = overallStatus === 'success' ? '✅' : '🚨';
             const title = `${icon} Daily Health Report: ${date}`;
 
             // Build Summary Table
-            let summaryTable = `| Component | Status | Outcome |\n|---|---|---|\n`;
-            for (const [name, outcome] of Object.entries(outcomes)) {
-              const statusIcon = outcome === 'success' ? '✅' : '❌';
-              summaryTable += `| ${name} | ${statusIcon} | ${outcome.toUpperCase()} |\n`;
-            }
+            const summaryTable = `| Tool | Status | Outcome |\n|---|---|---|\n${toolRows.join('\n')}\n`;
 
             // Helper to extract failure details (simplified)
             function getBriefLog(log) {
               if (!log) return '';
               const lines = log.split('\n');
-              // Grab failures or errors
-              const failures = lines.filter(l => l.includes('FAILED') || l.includes('Error:') || l.includes('FAIL') || l.includes('✘'));
-              if (failures.length > 0) {
-                 return failures.slice(0, 10).join('\n') + (failures.length > 10 ? '\n...' : '');
+              // Filter out the STATUS_ markers from the view
+              const filtered = lines.filter(l => !l.includes('STATUS_'));
+              
+              const relevant = filtered.filter(l => 
+                l.includes('FAILED') || l.includes('Error:') || l.includes('FAIL') || l.includes('✘') || 
+                l.includes('error') || l.includes('reformatted') || l.includes('would be reformatted')
+              );
+              
+              if (relevant.length > 0) {
+                 return relevant.slice(0, 15).join('\n') + (relevant.length > 15 ? '\n...' : '');
               }
-              // If no explicit failure lines, grep tail
-              return lines.slice(-10).join('\n');
+              return filtered.slice(-15).join('\n');
             }
 
             // Build Detailed Body
             let details = '';
-            for (const [key, log] of Object.entries(logs)) {
-               // Only show details if failed
-               const outcomeKey = {
-                 'backend_lint': 'Backend Linting',
-                 'backend_test': 'Backend Tests',
-                 'frontend_lint': 'Frontend Linting',
-                 'frontend_test': 'Frontend Tests',
-                 'e2e': 'Frontend E2E'
-               }[key];
-               
-               if (outcomes[outcomeKey] === 'failure') {
-                   details += `### ❌ Failure Details: ${outcomeKey}\n\`\`\`\n${getBriefLog(log)}\n\`\`\`\n\n`;
-               }
-            }
+            // Only show logs for steps that had a failure
+             if (failures.length > 0) {
+                 details += `### ❌ Failure Details\n`;
+                 // Naive mapping of tool failure to log file (could be duplicate if multiple tools in one step fail)
+                 const failedLogs = new Set();
+                 
+                 // Map tool names back to their log keys
+                 // (Simple heuristic for now)
+                  for (const tool of tools) {
+                      if (toolRows.find(r => r.includes(tool.name) && r.includes('FAIL'))) {
+                          // Find key for this tool
+                           // logs is defined in scope
+                           if (tool.name.includes('Black') || tool.name.includes('Ruff') || tool.name.includes('Mypy')) failedLogs.add({ name: 'Backend Lint Log', log: logs.backend_lint });
+                           if (tool.name.includes('Pytest')) failedLogs.add({ name: 'Backend Test Log', log: logs.backend_test });
+                           if (tool.name.includes('Prettier') || tool.name.includes('ESLint') || tool.name.includes('Svelte')) failedLogs.add({ name: 'Frontend Lint Log', log: logs.frontend_lint });
+                           if (tool.name.includes('Vitest')) failedLogs.add({ name: 'Frontend Test Log', log: logs.frontend_test });
+                           if (tool.name.includes('Playwright')) failedLogs.add({ name: 'E2E Log', log: logs.e2e });
+                      }
+                  }
+                  
+                  for (const item of failedLogs) {
+                      details += `#### ${item.name}\n\`\`\`\n${getBriefLog(item.log)}\n\`\`\`\n\n`;
+                  }
+             }
 
             // Add Coverage Summaries (even on success)
             function getCoverageTable(log) {
