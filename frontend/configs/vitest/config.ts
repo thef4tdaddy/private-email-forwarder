@@ -15,6 +15,15 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'json-summary'],
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/*.config.*',
+        '**/*.test.*',
+        '**/*.spec.*',
+        '**/setupTest.ts',
+        '**/*.css', // Exclude CSS files from coverage tracking
+      ],
     },
   },
   resolve: {
