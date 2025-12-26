@@ -48,6 +48,9 @@ npm run check
 echo -e "\n${YELLOW}[8/8] Frontend: Running Vitest...${NC}"
 npm run test:run
 
+echo -e "\n${YELLOW}[9/9] Frontend: Running Playwright E2E...${NC}"
+npx playwright test
+
 echo -e "\n${GREEN}====================================================${NC}"
 echo -e "${GREEN}      PASSED: Full Salvo Verification Complete      ${NC}"
 echo -e "${GREEN}====================================================${NC}"
