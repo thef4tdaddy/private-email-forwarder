@@ -102,7 +102,19 @@ jobs:
       - name: Frontend E2E (Playwright)
         id: e2e
         run: |
-          cd frontend
+          # Start Backend in Background
+          cd backend
+          source venv/bin/activate
+          # Use nohup to keep it running
+          nohup python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+
+          # Wait for Backend to be ready
+          echo "Waiting for Backend to start..."
+          timeout 30s bash -c 'until curl -s http://0.0.0.0:8000/api/health; do sleep 1; done'
+          echo "Backend started!"
+
+          # Run Playwright
+          cd ../frontend
           npx playwright test 2>&1 | tee ../e2e_test.log
         continue-on-error: true
 
