@@ -80,11 +80,16 @@ jobs:
             const fs = require('fs');
             const date = new Date().toLocaleDateString();
 
+            // Helper to clean logs
+            function stripAnsi(str) {
+              return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+            }
+
             let backendLog = '';
             let frontendLog = '';
 
-            try { backendLog = fs.readFileSync('backend_test.log', 'utf8'); } catch (e) { backendLog = 'Log file not found.'; }
-            try { frontendLog = fs.readFileSync('frontend_test.log', 'utf8'); } catch (e) { frontendLog = 'Log file not found.'; }
+            try { backendLog = stripAnsi(fs.readFileSync('backend_test.log', 'utf8')); } catch (e) { backendLog = 'Log file not found.'; }
+            try { frontendLog = stripAnsi(fs.readFileSync('frontend_test.log', 'utf8')); } catch (e) { frontendLog = 'Log file not found.'; }
 
               // Helper to extract relevant failure lines and coverage table
             function getFailureSummary(log) {
