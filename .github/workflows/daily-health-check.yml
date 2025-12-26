@@ -69,8 +69,8 @@ jobs:
         continue-on-error: true
 
       # --- Reporting ---
-      - name: Create Issue on Failure
-        if: always() && (steps.backend.outcome == 'failure' || steps.frontend.outcome == 'failure')
+      - name: Create Issue on Failure OR Success
+        if: always()
         uses: actions/github-script@v7
         env:
           BACKEND_OUTCOME: ${{ steps.backend.outcome }}
@@ -136,13 +136,14 @@ jobs:
 
             // Helper to create issue and comments if needed
             async function createIssue(type, summary, log, outcome) {
-              if (outcome !== 'failure' && !summary.includes('FAILED')) return; // Only create issue on failure
-
-              const fullBody = `The Daily Health Check for **${type}** failed on ${date}. 
+              // Create issue for BOTH success and failure to show coverage gaps
+              
+              const icon = outcome === 'failure' ? '🚨' : '✅';
+              const title = `${icon} ${type} Health Check ${outcome === 'failure' ? 'Failed' : 'Report'}: ${date}`;
+              
+              const fullBody = `The Daily Health Check for **${type}** finished with status: **${outcome.toUpperCase()}**
                 
-                ## Status: ${outcome.toUpperCase()}
-                
-                ### 📋 Failure Summary
+                ### 📊 Coverage & Analysis
                 ${summary}
                 
                 ---
@@ -182,12 +183,14 @@ jobs:
             const backendSummary = getFailureSummary(backendLog);
             const frontendSummary = getFailureSummary(frontendLog);
 
-            if (process.env.BACKEND_OUTCOME === 'failure') {
-              await createIssue('Backend', backendSummary, backendLog, process.env.BACKEND_OUTCOME);
+            // Report on Backend
+            if (process.env.BACKEND_OUTCOME) {
+               await createIssue('Backend', backendSummary, backendLog, process.env.BACKEND_OUTCOME);
             }
 
-            if (process.env.FRONTEND_OUTCOME === 'failure') {
-              await createIssue('Frontend', frontendSummary, frontendLog, process.env.FRONTEND_OUTCOME);
+            // Report on Frontend
+            if (process.env.FRONTEND_OUTCOME) {
+               await createIssue('Frontend', frontendSummary, frontendLog, process.env.FRONTEND_OUTCOME);
             }
 
             // Also create a summary issue if BOTH failed (optional, but requested "create github issues")
