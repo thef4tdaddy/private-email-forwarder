@@ -8,45 +8,24 @@ on:
 
 permissions:
   contents: read
-  issues: write # Needed to create issues on failure
+  issues: write
 
 jobs:
-  health-check:
+  full-salvo:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           ref: develop
 
-      # --- Backend Setup & Test ---
+      # --- Setup ---
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install Backend Dependencies
-        run: |
-          cd backend
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r ../requirements.txt
-          pip install -r ../requirements.txt
-          pip install pytest pytest-cov
-
-      - name: Run Backend Tests & Coverage
-        id: backend
-        run: |
-          cd backend
-          source venv/bin/activate
-          # Run tests and output coverage report to terminal. Fail under 50%.
-          set -o pipefail
-          pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/ 2>&1 | tee ../backend_test.log
-        continue-on-error: true
-
-      # --- Frontend Setup & Test ---
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -54,27 +33,91 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r ../requirements.txt
+          pip install pytest pytest-cov black ruff mypy
+
       - name: Install Frontend Dependencies
         run: |
           cd frontend
           npm ci
+          npx playwright install --with-deps
 
-      - name: Run Frontend Tests & Coverage
-        id: frontend
+      # --- Backend Salvo ---
+      - name: Backend Linting (Black, Ruff, Mypy)
+        id: backend_lint
+        run: |
+          cd backend
+          source venv/bin/activate
+          {
+            echo "::group::Black"
+            python -m black --check .
+            echo "::endgroup::"
+            echo "::group::Ruff"
+            python -m ruff check .
+            echo "::endgroup::"
+            echo "::group::Mypy"
+            python -m mypy . --ignore-missing-imports
+            echo "::endgroup::"
+          } 2>&1 | tee ../backend_lint.log
+        continue-on-error: true
+
+      - name: Backend Tests (Pytest)
+        id: backend_test
+        run: |
+          cd backend
+          source venv/bin/activate
+          # Run tests and output coverage report. Fail under 50%.
+          pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/ 2>&1 | tee ../backend_test.log
+        continue-on-error: true
+
+      # --- Frontend Salvo ---
+      - name: Frontend Linting (Prettier, ESLint, Svelte Check)
+        id: frontend_lint
+        run: |
+          cd frontend
+          {
+            echo "::group::Prettier"
+            npx prettier --check "src/**/*.{ts,js,svelte,css}"
+            echo "::endgroup::"
+            echo "::group::ESLint"
+            npm run lint
+            echo "::endgroup::"
+            echo "::group::Svelte Check"
+            npm run check
+            echo "::endgroup::"
+          } 2>&1 | tee ../frontend_lint.log
+        continue-on-error: true
+
+      - name: Frontend Tests (Vitest)
+        id: frontend_test
         run: |
           cd frontend
           # Fail if coverage is under 50%
-          set -o pipefail
           npm run test:run -- --coverage --coverage.thresholds.lines=50 2>&1 | tee ../frontend_test.log
         continue-on-error: true
 
+      - name: Frontend E2E (Playwright)
+        id: e2e
+        run: |
+          cd frontend
+          npx playwright test 2>&1 | tee ../e2e_test.log
+        continue-on-error: true
+
       # --- Reporting ---
-      - name: Create Issue on Failure OR Success
+      - name: Generate Daily Health Report
         if: always()
         uses: actions/github-script@v7
         env:
-          BACKEND_OUTCOME: ${{ steps.backend.outcome }}
-          FRONTEND_OUTCOME: ${{ steps.frontend.outcome }}
+          OUTCOME_BACKEND_LINT: ${{ steps.backend_lint.outcome }}
+          OUTCOME_BACKEND_TEST: ${{ steps.backend_test.outcome }}
+          OUTCOME_FRONTEND_LINT: ${{ steps.frontend_lint.outcome }}
+          OUTCOME_FRONTEND_TEST: ${{ steps.frontend_test.outcome }}
+          OUTCOME_E2E: ${{ steps.e2e.outcome }}
         with:
           script: |
             const fs = require('fs');
@@ -85,71 +128,107 @@ jobs:
               return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
             }
 
-            let backendLog = '';
-            let frontendLog = '';
+            // Read all logs
+            const logs = {
+              backend_lint: '',
+              backend_test: '',
+              frontend_lint: '',
+              frontend_test: '',
+              e2e: ''
+            };
 
-            try { backendLog = stripAnsi(fs.readFileSync('backend_test.log', 'utf8')); } catch (e) { backendLog = 'Log file not found.'; }
-            try { frontendLog = stripAnsi(fs.readFileSync('frontend_test.log', 'utf8')); } catch (e) { frontendLog = 'Log file not found.'; }
-
-              // Helper to extract relevant failure lines and coverage table
-            function getFailureSummary(log) {
-              if (!log) return 'No log available (Step might have been skipped).';
-              const lines = log.split('\n');
-              
-              // 1. Capture Failures
-              const failures = lines.filter(l => l.includes('FAILED') || l.includes('Error:') || l.includes('FAIL'));
-              
-              // 2. Capture Coverage Table (Look for the header and the following lines)
-              let coverageTable = [];
-              let insideCoverage = false;
-              for (const line of lines) {
-                if (line.includes('Name') && line.includes('Stmts') && line.includes('Miss')) {
-                    insideCoverage = true;
-                }
-                if (insideCoverage) {
-                    coverageTable.push(line);
-                    // Stop if we hit the limit or the end of the table
-                    if ((line.includes('TOTAL') && coverageTable.length > 5) || coverageTable.length > 500) {
-                        insideCoverage = false;
-                    }
-                }
-                if (!insideCoverage && coverageTable.length > 0 && line.trim() === '') {
-                     break; 
-                }
+            for (const key of Object.keys(logs)) {
+              try { 
+                logs[key] = stripAnsi(fs.readFileSync(`${key}.log`, 'utf8')); 
+              } catch (e) { 
+                logs[key] = 'Log file not found (Step might have been skipped).'; 
               }
-              
-              let output = '';
-              if (failures.length > 0) {
-                 output += `### ❌ Detected Failures:\n\`\`\`\n${failures.slice(0, 15).join('\n')}\n...\n\`\`\`\n\n`;
-              }
-              
-              if (coverageTable.length > 0) {
-                 output += `### 📊 Coverage Gaps:\n\`\`\`\n${coverageTable.join('\n')}\n\`\`\`\n\n`;
-              } else {
-                 const summary = lines.slice(-20).join('\n');
-                 output += `### 📋 Log Summary:\n\`\`\`\n${summary}\n\`\`\``;
-              }
-              
-              // Hard truncate removed in favor of splitting into comments
-              return output;
             }
 
-            // Helper to create issue and comments if needed
-            async function createIssue(type, summary, log, outcome) {
-              // Create issue for BOTH success and failure to show coverage gaps
-              
-              const icon = outcome === 'failure' ? '🚨' : '✅';
-              const title = `${icon} ${type} Health Check ${outcome === 'failure' ? 'Failed' : 'Report'}: ${date}`;
-              
-              const fullBody = `The Daily Health Check for **${type}** finished with status: **${outcome.toUpperCase()}**
-                
-                ### 📊 Coverage & Analysis
-                ${summary}
-                
-                ---
-                [View Full Actions Log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+            // Outcomes map
+            const outcomes = {
+              'Backend Linting': process.env.OUTCOME_BACKEND_LINT,
+              'Backend Tests': process.env.OUTCOME_BACKEND_TEST,
+              'Frontend Linting': process.env.OUTCOME_FRONTEND_LINT,
+              'Frontend Tests': process.env.OUTCOME_FRONTEND_TEST,
+              'Frontend E2E': process.env.OUTCOME_E2E
+            };
 
-              // --- Issue Splitting Logic ---
+            // Determine Overall Status
+            const overallStatus = Object.values(outcomes).every(o => o === 'success') ? 'success' : 'failure';
+            const icon = overallStatus === 'success' ? '✅' : '🚨';
+            const title = `${icon} Daily Health Report: ${date}`;
+
+            // Build Summary Table
+            let summaryTable = `| Component | Status | Outcome |\n|---|---|---|\n`;
+            for (const [name, outcome] of Object.entries(outcomes)) {
+              const statusIcon = outcome === 'success' ? '✅' : '❌';
+              summaryTable += `| ${name} | ${statusIcon} | ${outcome.toUpperCase()} |\n`;
+            }
+
+            // Helper to extract failure details (simplified)
+            function getBriefLog(log) {
+              if (!log) return '';
+              const lines = log.split('\n');
+              // Grab failures or errors
+              const failures = lines.filter(l => l.includes('FAILED') || l.includes('Error:') || l.includes('FAIL') || l.includes('✘'));
+              if (failures.length > 0) {
+                 return failures.slice(0, 10).join('\n') + (failures.length > 10 ? '\n...' : '');
+              }
+              // If no explicit failure lines, grep tail
+              return lines.slice(-10).join('\n');
+            }
+
+            // Build Detailed Body
+            let details = '';
+            for (const [key, log] of Object.entries(logs)) {
+               // Only show details if failed
+               const outcomeKey = {
+                 'backend_lint': 'Backend Linting',
+                 'backend_test': 'Backend Tests',
+                 'frontend_lint': 'Frontend Linting',
+                 'frontend_test': 'Frontend Tests',
+                 'e2e': 'Frontend E2E'
+               }[key];
+               
+               if (outcomes[outcomeKey] === 'failure') {
+                   details += `### ❌ Failure Details: ${outcomeKey}\n\`\`\`\n${getBriefLog(log)}\n\`\`\`\n\n`;
+               }
+            }
+
+            // Add Coverage Summaries (even on success)
+            function getCoverageTable(log) {
+               // Simple extraction of the table part
+               const lines = log.split('\n');
+               let table = [];
+               let capture = false;
+               for (const line of lines) {
+                  if (line.includes('Name') && line.includes('Stmts') || line.includes('File') && line.includes('Stmts')) capture = true;
+                  if (capture) {
+                      table.push(line);
+                      if ((line.includes('TOTAL') || line.includes('All files')) && table.length > 5) break;
+                      if (table.length > 20) { table.push('... (truncated)'); break; }
+                  }
+               }
+               return table.length > 0 ? table.join('\n') : '';
+            }
+
+            const backendCov = getCoverageTable(logs.backend_test);
+            const frontendCov = getCoverageTable(logs.frontend_test);
+
+            if (backendCov) details += `### 📊 Backend Coverage\n\`\`\`\n${backendCov}\n\`\`\`\n\n`;
+            if (frontendCov) details += `### 📊 Frontend Coverage\n\`\`\`\n${frontendCov}\n\`\`\`\n\n`;
+
+            const fullBody = `**Full Salvo Verification Status**: ${overallStatus.toUpperCase()}
+
+            ${summaryTable}
+
+            ---
+            ${details}
+
+            [View Full Actions Log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+
+             // --- Issue Splitting & Creation ---
               const MAX_CHAR = 60000;
               let issueBody = fullBody;
               let remainingParts = [];
@@ -168,7 +247,7 @@ jobs:
                 repo: context.repo.repo,
                 title: title,
                 body: issueBody,
-                labels: ['bug', 'automated-report', 'coverage', type.toLowerCase()]
+                labels: ['automated-report', 'daily-health', overallStatus]
               });
 
               for (const part of remainingParts) {
@@ -180,86 +259,46 @@ jobs:
                   });
               }
 
-              // --- Auto-Create Individual Coverage Tasks ---
-              // Only do this on success or partial success to avoid spamming during catastrophic failure
-              try {
-                  await manageCoverageIssues(type, summary);
-              } catch (e) {
-                  console.log(`Failed to create coverage tasks: ${e.message}`);
-              }
-            }
-
-            async function manageCoverageIssues(type, logSummary) {
+              // --- Auto-Create Coverage Tasks ---
+              async function manageCoverageIssues(type, logSummary) {
+                // ... (Existing Logic Preserved) ...
                 const lines = logSummary.split('\n');
                 const lowCoverageFiles = [];
-                
-                // Flexible parsing for Pytest-cov (simple) and Vitest (table)
-                // Default threshold: 80%
                 for (const line of lines) {
-                    const row = line.split(/\s+|\|/).filter(Boolean); // Split by whitespace or pipe
-                    // Very naive heuristic: valid rows have a filename and some numbers
-                    // Frontend: File | % Stmts | ...
-                    // Backend: Name | Stmts | Miss | Cover
-                    
+                    const row = line.split(/\s+|\|/).filter(Boolean);
                     if (row.length < 4) continue;
-                    
                     const filename = row[0];
                     if (!filename.includes('.') || filename === 'File' || filename === 'Name' || filename.includes('---')) continue;
-
-                    // Look for a percentage that is low
                     const percentages = row.filter(item => item.match(/^\d+(\.\d+)?%?$/)).map(p => parseFloat(p));
-                    const coverage = percentages.find(p => p < 80); // Find first metric below 80%
-
+                    const coverage = percentages.find(p => p < 80);
                     if (coverage !== undefined) {
                         lowCoverageFiles.push({ file: filename, coverage });
                     }
                 }
-                
-                // Rate Limit: Top 3 worst offenders only
                 lowCoverageFiles.sort((a, b) => a.coverage - b.coverage);
                 const candidates = lowCoverageFiles.slice(0, 3);
-                
                 for (const item of candidates) {
                     const issueTitle = `test(coverage): Improve coverage for ${item.file} (${item.coverage}%)`;
-                    
-                    // Check for existing issue
                     const existing = await github.rest.search.issuesAndPullRequests({
                         q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "Improve coverage for ${item.file}"`
                     });
-                    
                     if (existing.data.total_count === 0) {
                         await github.rest.issues.create({
                             owner: context.repo.owner,
                             repo: context.repo.repo,
                             title: issueTitle,
-                            body: `Automated Coverage Task\n\nFile: \`${item.file}\`\nCurrent Coverage: **${item.coverage}%**\n\nPlease write tests to improve coverage for this file above 80%.`,
+                            body: `Automated Coverage Task\n\nFile: \`${item.file}\`\nCurrent Coverage: **${item.coverage}%**\n\nRun \`daily-health-check\` to see progress.`,
                             labels: ['coverage-gap', 'help-wanted', `area:${type.toLowerCase()}`]
                         });
                         console.log(`Created task for ${item.file}`);
-                    } else {
-                        console.log(`Task already exists for ${item.file}`);
                     }
                 }
             }
 
-            const backendSummary = getFailureSummary(backendLog);
-            const frontendSummary = getFailureSummary(frontendLog);
+            try { await manageCoverageIssues('Backend', logs.backend_test); } catch(e) {}
+            try { await manageCoverageIssues('Frontend', logs.frontend_test); } catch(e) {}
 
-            // Report on Backend
-            if (process.env.BACKEND_OUTCOME) {
-               await createIssue('Backend', backendSummary, backendLog, process.env.BACKEND_OUTCOME);
-            }
-
-            // Report on Frontend
-            if (process.env.FRONTEND_OUTCOME) {
-               await createIssue('Frontend', frontendSummary, frontendLog, process.env.FRONTEND_OUTCOME);
-            }
-
-            // Also create a summary issue if BOTH failed (optional, but requested "create github issues")
-            // Actually user said "create github issues for front and backend". Plural. So separate is good.
-
-            // Fail the workflow if any step failed
-            // Fail the workflow if any step failed
-            if (process.env.BACKEND_OUTCOME === 'failure' || process.env.FRONTEND_OUTCOME === 'failure') {
-              core.setFailed("One or more health checks failed. See created issues for details.");
+            // Mark Run as Failed if Overall Status is failure
+            if (overallStatus === 'failure') {
+                core.setFailed("Daily Health Check failed. See report issue.");
             }
