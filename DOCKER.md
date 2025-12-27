@@ -116,9 +116,10 @@ sudo chown -R $USER:$USER ./data
 
 If you prefer to use SQLite instead of PostgreSQL:
 
-1. Remove the `DATABASE_URL` from your `.env` file (or comment it out)
-2. Modify `docker-compose.yml` to remove the `db` service dependency
-3. The application will automatically use SQLite with the database file at `/app/local_dev.db`
+1. Remove the `DATABASE_URL` from your `.env` file (or comment it out).
+2. Remove or comment out the `DATABASE_URL` entry in the `environment` section of `docker-compose.yml` (this value overrides the one from `.env`).
+3. Modify `docker-compose.yml` to remove the `db` service dependency.
+4. The application will automatically use SQLite with the database file at `/app/local_dev.db`.
 
 ## Production Deployment
 
