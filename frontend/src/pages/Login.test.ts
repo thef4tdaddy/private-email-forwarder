@@ -240,7 +240,7 @@ describe('Login Component', () => {
 
 	it('renders LogIn icon on submit button', () => {
 		const onLoginSuccess = vi.fn();
-		const { container } = render(Login, { props: { onLoginSuccess } });
+		render(Login, { props: { onLoginSuccess } });
 
 		// Check that button contains the LogIn icon (when not loading)
 		const button = screen.getByText('Access Dashboard');
