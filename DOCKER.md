@@ -11,7 +11,7 @@ This guide will help you run SentinelShare using Docker and Docker Compose.
 
 1. **Clone the repository** (if you haven't already):
    ```bash
-   git clone https://github.com/thef4tdaddy/SentinelShare.git
+   git clone https://github.com/f4tdaddy/SentinelShare.git
    cd SentinelShare
    ```
 
