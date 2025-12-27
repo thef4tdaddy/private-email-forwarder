@@ -33,6 +33,7 @@ __pycache__/
 # Database
 local_dev.db
 *.db
+data/
 
 # Build artifacts (we handle these in multi-stage)
 frontend/dist
