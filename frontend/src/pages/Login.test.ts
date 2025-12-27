@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Login from './Login.svelte';
 
 // Mock fetch globally
-global.fetch = vi.fn();
+globalThis.fetch = vi.fn() as typeof fetch;
 
 describe('Login Component', () => {
 	beforeEach(() => {
@@ -229,33 +229,30 @@ describe('Login Component', () => {
 		expect(onLoginSuccess).not.toHaveBeenCalled();
 	});
 
-	it('renders Lock icon', () => {
+	it('renders Lock icon in header', () => {
 		const onLoginSuccess = vi.fn();
 		const { container } = render(Login, { props: { onLoginSuccess } });
 
-		// Check for Lock icon presence in the blue circle
+		// Check for Lock icon SVG element within the blue circle container
 		const lockIconContainer = container.querySelector('.bg-blue-50');
 		expect(lockIconContainer).toBeTruthy();
+		
+		// Verify SVG icon is present (lucide-svelte renders as SVG)
+		const svgIcon = lockIconContainer?.querySelector('svg');
+		expect(svgIcon).toBeTruthy();
+		expect(svgIcon?.classList.contains('lucide-icon')).toBe(true);
 	});
 
-	it('renders LogIn icon on submit button', () => {
+	it('renders LogIn icon on submit button when not loading', () => {
 		const onLoginSuccess = vi.fn();
 		render(Login, { props: { onLoginSuccess } });
 
-		// Check that button contains the LogIn icon (when not loading)
 		const button = screen.getByText('Access Dashboard');
 		expect(button).toBeTruthy();
-	});
-
-	it('focuses password field on mount', async () => {
-		const onLoginSuccess = vi.fn();
-		render(Login, { props: { onLoginSuccess } });
-
-		await waitFor(() => {
-			const passwordInput = screen.getByLabelText('Password') as HTMLInputElement;
-			// Note: jsdom doesn't fully support focus(), so we just verify the field exists and is ready
-			expect(passwordInput).toBeTruthy();
-			expect(passwordInput.id).toBe('password');
-		});
+		
+		// Verify LogIn icon SVG is present in button (not loading state)
+		const svgIcon = button.querySelector('svg');
+		expect(svgIcon).toBeTruthy();
+		expect(svgIcon?.classList.contains('lucide-icon')).toBe(true);
 	});
 });
