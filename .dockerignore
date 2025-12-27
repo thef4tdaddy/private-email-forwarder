@@ -19,6 +19,7 @@ coverage/
 htmlcov/
 
 # Development files
+.env
 .env.example
 .husky
 commitlint.config.js
